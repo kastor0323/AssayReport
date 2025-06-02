@@ -1,0 +1,60 @@
+.record-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: calc(100vh - 80px);
+}
+
+.record-content {
+  h1 {
+    color: #1f2937;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    font-weight: bold;
+  }
+}
+
+.record-list {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.record-item {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+  }
+}
+
+.record-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 1.25rem;
+  font-weight: 600;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.record-date {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0 0 1rem 0;
+}
+
+.record-summary {
+  color: #374151;
+  line-height: 1.5;
+  margin: 0;
+} 
