@@ -4,7 +4,7 @@ import '../scss/Screens/Auth.scss';
 import { signup } from '../Api/AuthApi';
 
 
-const SignUp = ({ onLogin }) => {
+const SignUpPage = ({ onLogin }) => {
   const [formData, setFormData] = useState({
     name: '',
     user_id: '',
@@ -122,4 +122,4 @@ const SignUp = ({ onLogin }) => {
   );
 };
 
-export default SignUp; 
+export default SignUpPage; 

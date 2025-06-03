@@ -8,7 +8,6 @@ const authApi = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'Platform': 'web', // 또는 navigator.userAgent 등
   },
   timeout: 15000,
 });
@@ -38,9 +37,11 @@ authApi.interceptors.response.use(
 );
 
 export const signup = async (user_id, password, name) => {
+  console.log(user_id, password, name);
   return authApi.post('/signup', { user_id, password, name });
 };
 
 export const login = async (user_id, password) => {
+  console.log(user_id, password);
   return authApi.post('/login', { user_id, password });
 };

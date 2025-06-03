@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import '../scss/Screens/Record.scss';
 
-const Record = () => {
+const RecordPage = () => {
   const records = [
     { id: 1, title: '첫 번째 기록', date: '2024-01-01', summary: '첫 번째 기록입니다.' },
     { id: 2, title: '두 번째 기록', date: '2024-01-02', summary: '두 번째 기록입니다.' },
@@ -31,4 +31,4 @@ const Record = () => {
   );
 };
 
-export default Record; 
+export default RecordPage; 

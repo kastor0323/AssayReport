@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import '../scss/Screens/RecordDetail.scss';
 
-const RecordDetail = () => {
+const RecordDetailPage = () => {
   const { id } = useParams();
   
   // 임시 데이터 (실제로는 API에서 가져올 데이터)
@@ -29,4 +29,4 @@ const RecordDetail = () => {
   );
 };
 
-export default RecordDetail; 
+export default RecordDetailPage; 

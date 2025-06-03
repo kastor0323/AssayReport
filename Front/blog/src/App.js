@@ -7,11 +7,11 @@ import AppNavigation from './Navigation/AppNavigation';
 import AuthNavigation from './Navigation/AuthNavigation';
 
 // Screen Components
-import LogIn from './Screens/LogIn';
-import SignUp from './Screens/SignUp';
-import Main from './Screens/Main';
-import Record from './Screens/Record';
-import RecordDetail from './Screens/RecordDetail';
+import LogIn from './Screens/LoginPage';
+import SignUp from './Screens/SignUpPage';
+import Main from './Screens/MainPage';
+import Record from './Screens/RecordPage';
+import RecordDetail from './Screens/RecordDetailPage';
 
 function App() {
   const [user, setUser] = useState(null);

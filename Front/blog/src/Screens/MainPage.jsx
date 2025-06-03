@@ -1,7 +1,7 @@
 import React from 'react';
 import '../scss/Screens/Main.scss';
 
-const Main = ({ user }) => {
+const MainPage = ({ user }) => {
   return (
     <div className="main-container">
       <div className="main-content">
@@ -16,4 +16,4 @@ const Main = ({ user }) => {
   );
 };
 
-export default Main; 
+export default MainPage; 
