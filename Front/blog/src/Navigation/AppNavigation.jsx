@@ -7,7 +7,7 @@ const AppNavigation = ({ user, onLogout }) => {
     <nav className="app-navigation">
       <div className="nav-container">
         <div className="nav-logo">
-          <Link to="/main">블로그</Link>
+          <Link to="/main">자소서 컨설팅</Link>
         </div>
         <div className="nav-menu">
           <Link to="/main" className="nav-item">메인</Link>

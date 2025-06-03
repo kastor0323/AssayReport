@@ -5,7 +5,7 @@ import '../scss/Screens/Auth.scss';
 const SignUp = ({ onLogin }) => {
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    user_id: '',
     password: '',
     confirmPassword: ''
   });
@@ -22,7 +22,7 @@ const SignUp = ({ onLogin }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name || !formData.user_id || !formData.password || !formData.confirmPassword) {
       setError('모든 필드를 입력해주세요.');
       return;
     }
@@ -41,11 +41,12 @@ const SignUp = ({ onLogin }) => {
     const userData = {
       id: 1,
       name: formData.name,
-      email: formData.email
+      user_id: formData.user_id,
+      password: formData.password
     };
 
     onLogin(userData);
-    navigate('/main');
+    navigate('/login');
   };
 
   return (
@@ -67,14 +68,14 @@ const SignUp = ({ onLogin }) => {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="email">이메일</label>
+            <label htmlFor="user_id">아이디</label>
             <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
+              type="user_id"
+              id="user_id"
+              name="user_id"
+              value={formData.user_id}
               onChange={handleChange}
-              placeholder="이메일을 입력하세요"
+              placeholder="아이디를 입력하세요"
               required
             />
           </div>

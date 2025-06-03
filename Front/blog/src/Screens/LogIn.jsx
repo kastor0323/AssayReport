@@ -4,7 +4,7 @@ import '../scss/Screens/Auth.scss';
 
 const LogIn = ({ onLogin }) => {
   const [formData, setFormData] = useState({
-    email: '',
+    user_id: '',
     password: ''
   });
   const [error, setError] = useState('');
@@ -20,8 +20,8 @@ const LogIn = ({ onLogin }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password) {
-      setError('이메일과 비밀번호를 입력해주세요.');
+    if (!formData.user_id || !formData.password) {
+      setError('아이디와 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -29,7 +29,7 @@ const LogIn = ({ onLogin }) => {
     const userData = {
       id: 1,
       name: '사용자',
-      email: formData.email
+      user_id: formData.user_id
     };
 
     onLogin(userData);
@@ -43,14 +43,14 @@ const LogIn = ({ onLogin }) => {
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="email">이메일</label>
+            <label htmlFor="user_id">아이디</label>
             <input
-              type="id"
-              id="email"
-              name="email"
-              value={formData.email}
+              type="user_id"
+              id="user_id"
+              name="user_id"
+              value={formData.user_id}
               onChange={handleChange}
-              placeholder="이메일을 입력하세요"
+              placeholder="아이디를 입력하세요"
               required
             />
           </div>
