@@ -5,6 +5,7 @@ import com.NLP.resume.assay.dto.SaveAssayRequest;
 import com.NLP.resume.assay.dto.SaveAssayResponse;
 import com.NLP.resume.assay.repository.AssayRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 
 import java.beans.Transient;
@@ -16,7 +17,7 @@ public class AssayService {
   private final AssayRepository assayRepository;
 
   @Transient
-  public SaveAssayResponse saveAssay(SaveAssayRequest request) {
+  public SaveAssayResponse saveAssay(SaveAssayRequest request) throws BadRequestException {
     try{
 
       Assay assay = Assay.builder()
@@ -30,7 +31,7 @@ public class AssayService {
 
       return new SaveAssayResponse(savedAssay);
     } catch (Exception e){
-      throw new RuntimeException("자소서 저장 중 오류가 발생했습니다" + e.getMessage());
+      throw new BadRequestException("자소서 저장 중 오류가 발생했습니다" + e.getMessage());
     }
   }
 
