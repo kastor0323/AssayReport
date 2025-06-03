@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../scss/Screens/Auth.scss';
+import { signup } from '../Api/AuthApi';
+
 
 const SignUp = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -19,7 +21,7 @@ const SignUp = ({ onLogin }) => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.name || !formData.user_id || !formData.password || !formData.confirmPassword) {
@@ -37,16 +39,23 @@ const SignUp = ({ onLogin }) => {
       return;
     }
 
-    // 간단한 회원가입 로직 (실제로는 API 호출)
-    const userData = {
-      id: 1,
-      name: formData.name,
-      user_id: formData.user_id,
-      password: formData.password
-    };
-
-    onLogin(userData);
-    navigate('/login');
+    try {
+      const response = await signup(formData.user_id, formData.password, formData.name);
+      
+      if (response.data.success) {
+        // 회원가입 성공 시 로그인 페이지로 이동
+        navigate('/login');
+      } else {
+        setError(response.data.message || '회원가입에 실패했습니다.');
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 409) {
+        setError('이미 존재하는 아이디입니다.');
+      } else {
+        setError('회원가입 중 오류가 발생했습니다.');
+      }
+      console.error('Signup error:', error);
+    }
   };
 
   return (
