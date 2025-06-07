@@ -10,8 +10,8 @@ const AppNavigation = ({ user, onLogout }) => {
           <Link to="/main">자소서 컨설팅</Link>
         </div>
         <div className="nav-menu">
-          <Link to="/main" className="nav-item">메인</Link>
-          <Link to="/record" className="nav-item">기록</Link>
+          <Link to="/resume/assay" className="nav-item">메인</Link>
+          <Link to="/resume/assay/record" className="nav-item">기록</Link>
           <div className="nav-user">
             <span className="user-name">{user?.name || '사용자'}</span>
             <button onClick={onLogout} className="logout-btn">로그아웃</button>

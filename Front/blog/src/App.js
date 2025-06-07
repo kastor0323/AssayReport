@@ -21,6 +21,8 @@ function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('isLoggedIn');
     setUser(null);
   };
 
@@ -37,17 +39,17 @@ function App() {
           {user ? (
             // 로그인된 사용자 라우트
             <>
-              <Route path="/main" element={<Main user={user} />} />
-              <Route path="/record" element={<Record />} />
-              <Route path="/record/:id" element={<RecordDetail />} />
-              <Route path="*" element={<Navigate to="/main" replace />} />
+              <Route path="/resume/assay" element={<Main user={user} />} />
+              <Route path="/resume/assay/record" element={<Record />} />
+              <Route path="/resume/assay/record/:id" element={<RecordDetail />} />
+              <Route path="*" element={<Navigate to="/resume/assay" replace />} />
             </>
           ) : (
             // 로그인되지 않은 사용자 라우트
             <>
-              <Route path="/login" element={<LogIn onLogin={handleLogin} />} />
-              <Route path="/signup" element={<SignUp onLogin={handleLogin} />} />
-              <Route path="*" element={<Navigate to="/login" replace />} />
+              <Route path="/resume/login" element={<LogIn onLogin={handleLogin} />} />
+              <Route path="/resume/signup" element={<SignUp onLogin={handleLogin} />} />
+              <Route path="*" element={<Navigate to="/resume/login" replace />} />
             </>
           )}
         </Routes>

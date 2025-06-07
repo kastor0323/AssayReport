@@ -1,29 +1,42 @@
-import React from 'react';
-import { useParams, Link } from 'react-router-dom';
-import '../scss/Screens/RecordDetail.scss';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { getAssayDetail } from '../Api/AuthApi';
+import '../scss/Screens/Record.scss';
 
 const RecordDetailPage = () => {
   const { id } = useParams();
-  
-  // 임시 데이터 (실제로는 API에서 가져올 데이터)
-  const record = {
-    id: id,
-    title: `기록 ${id}`,
-    date: '2024-01-01',
-    content: `이것은 기록 ${id}의 상세 내용입니다. 실제 블로그 포스트의 내용이 여기에 표시됩니다.`
-  };
+  const [detail, setDetail] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        const response = await getAssayDetail(id);
+        setDetail(response.data);
+      } catch (err) {
+        setError('상세 정보를 불러오는 데 실패했습니다.');
+      }
+    };
+    fetchDetail();
+  }, [id]);
+
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
+  if (!detail) {
+    return <div>로딩 중...</div>;
+  }
 
   return (
     <div className="record-detail-container">
       <div className="record-detail-content">
-        <Link to="/record" className="back-link">← 기록 목록으로 돌아가기</Link>
-        <article className="record-detail">
-          <h1>{record.title}</h1>
-          <p className="record-date">{record.date}</p>
-          <div className="record-content">
-            {record.content}
-          </div>
-        </article>
+        <h1>{detail.assay_title}</h1>
+        <div className="detail-row"><strong>날짜:</strong> {detail.record_date ? detail.record_date.split('T')[0] : ''}</div>
+        <div className="detail-row"><strong>직업:</strong> {detail.job}</div>
+        <div className="detail-row"><strong>경력:</strong> {detail.state}</div>
+        <div className="detail-row"><strong>점수:</strong> {detail.score}</div>
+        <div className="detail-row"><strong>자소서 내용</strong></div>
+        <div className="detail-content-box">{detail.assay_content}</div>
       </div>
     </div>
   );

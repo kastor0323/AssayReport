@@ -1,6 +1,10 @@
 package com.NLP.resume.assay.dto;
 
+import jakarta.persistence.Column;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+
+import java.time.LocalDateTime;
 
 @Builder
 @AllArgsConstructor
@@ -13,4 +17,6 @@ public class SaveAssayRequest {
   private String assay_title;
   private String content;
   private double score;
+  private String job;
+  private String state;
 }

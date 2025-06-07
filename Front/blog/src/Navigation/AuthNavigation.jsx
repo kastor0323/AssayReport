@@ -7,7 +7,7 @@ const AuthNavigation = () => {
     <nav className="auth-navigation">
       <div className="nav-container">
         <div className="nav-logo">
-          <Link to="/login">자소서 컨설팅</Link>
+          <Link to="/resume/login">자소서 컨설팅</Link>
         </div>
       </div>
     </nav>

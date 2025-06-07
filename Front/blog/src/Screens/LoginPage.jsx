@@ -33,8 +33,11 @@ const LoginPage = ({ onLogin }) => {
         const userData = {
           user_id: response.data.user_id,
           name: response.data.name
-        };        
+        };
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('isLoggedIn', 'true');
         onLogin(userData);
+        navigate('/main');
       } else {
         setError(response.data.message || '로그인에 실패했습니다.');
       }
