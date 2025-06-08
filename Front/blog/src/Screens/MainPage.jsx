@@ -7,28 +7,37 @@ const MainPage = ({ user }) => {
     jobTitle: '',
     experience: '신입',
     title: '',
-    content: ''
+    questions: [{ question: '', content: '' }]
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const handleChange = (e, index) => {
+    if (index !== undefined) {
+      const newQuestions = [...formData.questions];
+      newQuestions[index][e.target.name] = e.target.value;
+      setFormData({
+        ...formData,
+        questions: newQuestions
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [e.target.name]: e.target.value
+      });
+    }
   };
 
-  const handleToggle = () => {
+  const handleAddQuestion = () => {
     setFormData({
       ...formData,
-      experience: formData.experience === '신입' ? '인턴' : '신입'
+      questions: [...formData.questions, { question: '', content: '' }]
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.jobTitle || !formData.title || !formData.content) {
+    if (!formData.jobTitle || !formData.title || formData.questions.some(q => !q.question || !q.content)) {
       setError('모든 필드를 입력해주세요.');
       setSuccess('');
       return;
@@ -37,15 +46,23 @@ const MainPage = ({ user }) => {
     setSuccess('');
     const payload = {
       assay_title: formData.title,
-      content: formData.content,
       score: 75,
       job: formData.jobTitle,
-      state: formData.experience
+      state: formData.experience,
+      questionAnswers: formData.questions.map(q => ({
+        question: q.question,
+        answer: q.content
+      }))
     };
     try {
       await postAssay(payload);
       setSuccess('자소서가 성공적으로 저장되었습니다!');
-      setFormData({ jobTitle: '', experience: '신입', title: '', content: '' });
+      setFormData({ 
+        jobTitle: '', 
+        experience: '신입', 
+        title: '', 
+        questions: [{ question: '', content: '' }] 
+      });
     } catch (error) {
       setError('저장 중 오류가 발생했습니다.');
       setSuccess('');
@@ -102,18 +119,38 @@ const MainPage = ({ user }) => {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="content">자소서 내용</label>
-            <textarea
-              id="content"
-              name="content"
-              value={formData.content}
-              onChange={handleChange}
-              placeholder="자소서 내용을 입력하세요"
-              required
-              rows="10"
-            />
-          </div>
+          {formData.questions.map((q, index) => (
+            <div key={index} className="question-group">
+              <div className="form-group">
+                <label htmlFor={`question-${index}`}>질문 {index + 1}</label>
+                <input
+                  type="text"
+                  id={`question-${index}`}
+                  name="question"
+                  value={q.question}
+                  onChange={(e) => handleChange(e, index)}
+                  placeholder="자소서 질문을 입력하세요"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor={`content-${index}`}>답변 {index + 1}</label>
+                <textarea
+                  id={`content-${index}`}
+                  name="content"
+                  value={q.content}
+                  onChange={(e) => handleChange(e, index)}
+                  placeholder="자소서 답변을 입력하세요"
+                  required
+                  rows="10"
+                />
+              </div>
+            </div>
+          ))}
+
+          <button type="button" className="add-btn" onClick={handleAddQuestion}>
+            추가하기
+          </button>
 
           <button type="submit" className="submit-btn">자소서 평가 받기</button>
         </form>

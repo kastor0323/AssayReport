@@ -36,7 +36,18 @@ const RecordDetailPage = () => {
         <div className="detail-row"><strong>경력:</strong> {detail.state}</div>
         <div className="detail-row"><strong>점수:</strong> {detail.score}</div>
         <div className="detail-row"><strong>자소서 내용</strong></div>
-        <div className="detail-content-box">{detail.assay_content}</div>
+        <div className="detail-content-box">
+          {detail.questionAnswers && detail.questionAnswers.length > 0 ? (
+            detail.questionAnswers.map((qa, idx) => (
+              <div key={idx} style={{ marginBottom: '24px' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{qa.question}</div>
+                <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>{qa.answer}</div>
+              </div>
+            ))
+          ) : (
+            <div>자소서 내용이 없습니다.</div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -90,4 +90,29 @@
   font-size: 1.05rem;
   min-height: 120px;
   white-space: pre-line;
+}
+
+.record-detail-content {
+  h3 {
+    margin-bottom: 1rem;
+  }
+
+  .question-answers {
+    margin-top: 1rem;
+
+    .question-answer {
+      margin-bottom: 1rem;
+
+      .question {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+      }
+
+      .answer {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 8px;
+      }
+    }
+  }
 } 

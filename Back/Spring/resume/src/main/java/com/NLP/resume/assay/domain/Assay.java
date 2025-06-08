@@ -14,32 +14,42 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "assay")
 public class Assay {
-
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(nullable = false)
-  private int assay_id; //번호 자동 부여
+  private int assay_id;
 
   @Column(nullable = false)
   private String user_id;
 
   @Column(nullable = false, name = "recordDate")
   @CreatedDate
-  private LocalDateTime record_date; //record date ex)2025:05:24:09:00:00
+  private LocalDateTime record_date;
 
   @Column(nullable = false)
   private String assay_title;
 
   @Column(nullable = false)
-  private String assay_content;
-
-  @Column(nullable = false)
   private double score;
 
-  // 새로 추가된 필드들
   @Column(length = 100, nullable = false)
   private String job;
 
   @Column(length = 50, nullable = false)
-  private String state; //신입, 인턴
+  private String state;
+
+  @Column(columnDefinition = "LONGTEXT", nullable = false)
+  private String question;
+
+  @Column(columnDefinition = "LONGTEXT", nullable = false)
+  private String answer;
+
+  // 질문과 답변을 개별 필드로 분리
+  @Column(columnDefinition = "LONGTEXT", nullable = false)
+  private String questions; // "질문1|||질문2|||질문3" 형태
+
+  @Column(columnDefinition = "LONGTEXT", nullable = false)
+  private String answers; // "답변1|||답변2|||답변3" 형태
 }
+
+
