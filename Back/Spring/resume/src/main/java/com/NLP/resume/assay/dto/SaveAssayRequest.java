@@ -2,6 +2,7 @@ package com.NLP.resume.assay.dto;
 
 import lombok.*;
 import java.util.List;
+import java.util.Map;
 
 @Builder
 @AllArgsConstructor
@@ -17,6 +18,8 @@ public class SaveAssayRequest {
 
   // 질문-답변 리스트
   private List<QuestionAnswer> questionAnswers;
+
+  private List<Map<String, Object>> evaluationDetails;
 
   @Builder
   @AllArgsConstructor

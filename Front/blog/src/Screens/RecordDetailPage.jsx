@@ -34,16 +34,35 @@ const RecordDetailPage = () => {
         <div className="detail-row"><strong>날짜:</strong> {detail.record_date ? detail.record_date.split('T')[0] : ''}</div>
         <div className="detail-row"><strong>직업:</strong> {detail.job}</div>
         <div className="detail-row"><strong>경력:</strong> {detail.state}</div>
-        <div className="detail-row"><strong>점수:</strong> {detail.score}</div>
-        <div className="detail-row"><strong>자소서 내용</strong></div>
+        <div className="detail-row"><strong>평균 점수:</strong> {detail.score}점</div>
+        <div className="detail-row"><strong>등급:</strong> {detail.grade}</div>
+        
+        <div className="detail-row"><strong>자소서 내용 및 평가</strong></div>
         <div className="detail-content-box">
           {detail.questionAnswers && detail.questionAnswers.length > 0 ? (
-            detail.questionAnswers.map((qa, idx) => (
-              <div key={idx} style={{ marginBottom: '24px' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{qa.question}</div>
-                <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>{qa.answer}</div>
-              </div>
-            ))
+            detail.questionAnswers.map((qa, idx) => {
+              const evaluation = detail.evaluationDetails?.[idx];
+              return (
+                <div key={idx} className="qa-section">
+                  <div className="question-section">
+                    <h3>질문 {idx + 1}</h3>
+                    <div className="question-content">{qa.question}</div>
+                  </div>
+                  <div className="answer-section">
+                    <h3>답변 {idx + 1}</h3>
+                    <div className="answer-content">{qa.answer}</div>
+                  </div>
+                  {evaluation && (
+                    <div className="evaluation-section">
+                      <h3>평가 결과</h3>
+                      <div className="evaluation-content">
+                        <p><strong>점수:</strong> {evaluation.종합점수}점</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           ) : (
             <div>자소서 내용이 없습니다.</div>
           )}

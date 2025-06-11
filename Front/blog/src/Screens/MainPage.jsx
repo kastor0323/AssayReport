@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import '../scss/Screens/Main.scss';
 import { postAssay } from '../Api/AuthApi';
+import axios from 'axios';
+import { FLASK_SERVER_URL } from '../constants/config';
 
 const MainPage = ({ user }) => {
   const [formData, setFormData] = useState({
@@ -11,6 +13,7 @@ const MainPage = ({ user }) => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   const handleChange = (e, index) => {
     if (index !== undefined) {
@@ -35,6 +38,20 @@ const MainPage = ({ user }) => {
     });
   };
 
+  const evaluateResume = async (qa_pairs) => {
+    try {
+      const response = await axios.post(`${FLASK_SERVER_URL}/evaluate`, {
+        직무: formData.jobTitle,
+        직위: formData.experience,
+        qa_pairs: qa_pairs
+      });
+      return response.data;
+    } catch (error) {
+      console.error('평가 중 오류 발생:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.jobTitle || !formData.title || formData.questions.some(q => !q.question || !q.content)) {
@@ -44,17 +61,29 @@ const MainPage = ({ user }) => {
     }
     setError('');
     setSuccess('');
-    const payload = {
-      assay_title: formData.title,
-      score: 75,
-      job: formData.jobTitle,
-      state: formData.experience,
-      questionAnswers: formData.questions.map(q => ({
+    setIsEvaluating(true);
+
+    try {
+      // 자소서 평가 요청
+      const qa_pairs = formData.questions.map(q => ({
         question: q.question,
         answer: q.content
-      }))
-    };
-    try {
+      }));
+      
+      const evaluationResult = await evaluateResume(qa_pairs);
+      
+      const payload = {
+        assay_title: formData.title,
+        score: evaluationResult.평균점수,
+        job: formData.jobTitle,
+        state: formData.experience,
+        questionAnswers: formData.questions.map(q => ({
+          question: q.question,
+          answer: q.content
+        })),
+        evaluationDetails: evaluationResult.상세결과
+      };
+
       await postAssay(payload);
       setSuccess('자소서가 성공적으로 저장되었습니다!');
       setFormData({ 
@@ -67,6 +96,8 @@ const MainPage = ({ user }) => {
       setError('저장 중 오류가 발생했습니다.');
       setSuccess('');
       console.error('Error:', error);
+    } finally {
+      setIsEvaluating(false);
     }
   };
 
@@ -152,7 +183,9 @@ const MainPage = ({ user }) => {
             추가하기
           </button>
 
-          <button type="submit" className="submit-btn">자소서 평가 받기</button>
+          <button type="submit" className="submit-btn" disabled={isEvaluating}>
+            {isEvaluating ? '평가 중...' : '자소서 평가 받기'}
+          </button>
         </form>
       </div>
     </div>

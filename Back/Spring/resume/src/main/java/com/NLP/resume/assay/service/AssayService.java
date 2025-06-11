@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class AssayService {
 
   private final AssayRepository assayRepository;
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Transactional
   public SaveAssayResponse saveAssay(SaveAssayRequest request) throws BadRequestException {
@@ -36,15 +38,23 @@ public class AssayService {
       String answersStr = String.join("|||", answers);
       LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
 
+      // 평가 결과를 JSON 문자열로 변환
+      String evaluationDetailsJson = objectMapper.writeValueAsString(request.getEvaluationDetails());
+
+      // 점수에 따른 등급 결정
+      String grade = determineGrade(request.getScore());
+
       Assay assay = Assay.builder()
-              .user_id(request.getUser_id()) // 컨트롤러에서 설정된 값 사용
+              .user_id(request.getUser_id())
               .record_date(now)
               .assay_title(request.getAssay_title())
               .questions(questionsStr)
               .answers(answersStr)
               .score(request.getScore())
+              .grade(grade)
               .job(request.getJob())
               .state(request.getState())
+              .evaluation_details(evaluationDetailsJson)
               .build();
 
       Assay savedAssay = assayRepository.save(assay);
@@ -55,6 +65,12 @@ public class AssayService {
     }
   }
 
+  private String determineGrade(double score) {
+    if (score >= 80) return "우수 (80점 이상)";
+    if (score >= 60) return "보통 (60-79점)";
+    if (score >= 40) return "미흡 (40-59점)";
+    return "부족 (40점 미만)";
+  }
 
   // 사용자 별 assay 기록 가져오기
   @Transactional(readOnly = true)

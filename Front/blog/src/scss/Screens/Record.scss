@@ -97,6 +97,47 @@
     margin-bottom: 1rem;
   }
 
+  .qa-section {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+
+    .question-section {
+      margin-bottom: 1.5rem;
+      h3 {
+        margin-bottom: 0.5rem;
+      }
+      .question-content {
+        margin-bottom: 1.5rem;
+      }
+    }
+
+    .answer-section {
+      margin-bottom: 1.5rem;
+      h3 {
+        margin-bottom: 0.5rem;
+      }
+      .answer-content {
+        margin-bottom: 2rem;
+      }
+    }
+
+    .evaluation-section {
+      margin-bottom: 0;
+      h3 {
+        margin-bottom: 0.5rem;
+      }
+      .evaluation-content {
+        p {
+          margin-top: 1rem;
+          margin-bottom: 0.5rem;
+        }
+      }
+    }
+  }
+
   .question-answers {
     margin-top: 1rem;
 

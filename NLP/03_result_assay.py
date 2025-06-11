@@ -7,6 +7,11 @@ import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.tag import pos_tag
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
 
 class ResumeEvaluator:
     def __init__(self, reference_csv_path='jobkorea_keyword_analysis.csv'):
@@ -313,56 +318,30 @@ class ResumeEvaluator:
             '상세결과': evaluation_results
         }
 
+@app.route('/evaluate', methods=['POST'])
+def evaluate_resume():
+    try:
+        data = request.get_json()
+        
+        # 필수 필드 확인
+        required_fields = ['직무', '직위', 'qa_pairs']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'필수 필드가 누락되었습니다: {field}'}), 400
 
-def main():
-    """메인 실행 함수 - 사용 예시"""
-    
-    # 평가기 초기화
-    evaluator = ResumeEvaluator('jobkorea_keyword_analysis.csv')
-    
-    # 사용자 자소서 데이터 (예시)
-    user_resume_data = {
-        '직무': 'AI/ML엔지니어',
-        '직위': '신입',
-        'qa_pairs': [
-            {
-                'question': '경험에 대해 말씀해주세요',
-                'answer': '저는 AI/ML 엔지니어로서 다양한 프로젝트 경험을 쌓았습니다. 대규모 데이터셋을 활용하여 복잡한 문제를 해결하는 모델 개발에 도전했으며, 목표 달성을 위해 꾸준히 노력했습니다. 특히, 딥러닝 모델 구현 프로젝트를 성공적으로 이끌며 높은 성능을 달성했습니다. 이 과정에서 데이터 수집, 전처리, 모델링, 학습, 성능 최적화에 이르는 전 과정을 담당하며 많은 실패와 도전을 겪었지만, 끊임없는 분석과 노력을 통해 목표를 달성했습니다. 공모전에 참여하여 혁신적인 아이디어를 구현하고, 팀원들과의 협업을 통해 시너지를 창출하며 좋은 결과를 얻었던 경험도 있습니다. 이러한 경험들은 제가 AI/ML 분야에서 직면할 수 있는 다양한 문제에 효과적으로 대응하고, 실제 서비스에 적용 가능한 모델을 개발하는 데 중요한 역량이 될 것이라고 확신합니다. 또한, 새로운 기술을 공부하고 배우는 것을 시작으로, 저의 역량을 계속해서 발전시키는 방향으로 나아가고 싶습니다.'
-            },
-            {
-                'question': '본인의 역량을 설명해주세요',
-                'answer': '저의 핵심 역량은 AI/ML 모델의 구현, 최적화 및 시스템 통합 능력입니다. 특히, 효율적인 알고리즘 설계와 데이터 처리 기술을 바탕으로 복잡한 AI 시스템을 구축하는 데 강점이 있습니다. 번호판 자동 인식 시스템 개발 프로젝트에서는 TensorFlow와 Keras를 활용하여 CNN 모델을 구현하고, 임베디드 시스템에 적용하여 실제 환경에서의 성능을 성공적으로 향상시킨 경험이 있습니다. 또한, 학습된 모델을 실제 서비스에 적용하기 위한 기술적인 이해와 데이터 분석 역량 또한 뛰어납니다. 연구 과정에서 발생할 수 있는 다양한 문제들을 해결하기 위해 새로운 기술을 끊임없이 학습하고, 이를 실제 프로젝트에 적용하는 데 주저하지 않습니다. 이러한 역량들은 AI/ML 엔지니어로서 실제 문제를 해결하고, 기술 발전에 기여하는 데 필수적인 요소라고 생각합니다. 보드 기반의 시스템 개발과 차량 관련 데이터 처리 경험도 풍부합니다.'
-            },
-            {
-                'question': '직무에 대한 생각을 말씀해주세요',
-                'answer': 'AI/ML 엔지니어 직무는 단순히 코드를 작성하는 것을 넘어, 데이터를 기반으로 실제 비즈니스 가치를 창출하는 것이라고 생각합니다. 경량화된 모델을 통해 최적의 성능을 제공하고, 효율적인 메모리 처리를 통해 시스템의 자원 활용을 극대화하는 것이 중요하다고 봅니다. 또한, 끊임없이 변화하는 기술 환경 속에서 새로운 알고리즘을 연구하고, 이를 실제 서비스에 적용하는 능력이 필요하다고 생각합니다. 저는 석사 과정 동안 다양한 환경에서의 AI 모델 개발을 진행하며, 이러한 직무 역량을 충분히 길러왔습니다. 동반 성장을 추구하는 회사의 목표에 부합하기 위해 지속적으로 저의 스킬을 개발하고, 실제 현장에서 발생할 수 있는 복잡한 문제들을 해결하는 데 기여하고 싶습니다. 최고 수준의 AI/ML 전문가로 성장하여 회사와 함께 AI 산업을 선도하는 데 일조하겠습니다. 개발 역량을 보유하고 있으며, 데이터 처리 능력도 뛰어납니다.'
-            },
-            {
-                'question': '자기소개를 해보세요',
-                'answer': '저는 데이터에 대한 깊은 이해와 열정을 가진 AI/ML 엔지니어입니다. 다양한 분야에서 데이터를 다루고 분석하며 문제 해결 능력을 키워왔습니다. 대학교 시절부터 머신러닝, 딥러닝 관련 프로젝트와 논문 연구에 적극적으로 참여하며 이론적 지식과 실무 경험을 동시에 쌓았습니다. 특히, 연구실에서 진행했던 프로젝트들은 저에게 끊임없이 도전하고 배우는 기회를 제공했으며, 새로운 기술과 방법을 탐구하는 데 대한 강한 동기를 부여했습니다. 통계학적 지식과 프로그래밍 능력을 바탕으로 데이터를 효과적으로 분석하고, 이를 통해 의미 있는 인사이트를 도출하는 데 능숙합니다. 학부 시절부터 관련 학회에 꾸준히 참여하며 최신 트렌드를 파악하고, AI 분야의 전문가들과 교류하며 저의 역량을 더욱 확장해왔습니다. 이러한 경험과 지식을 바탕으로 귀사의 AI/ML 엔지니어로서 혁신적인 솔루션을 개발하고, 회사 성장에 기여하고 싶습니다. 여러 분야를 공부하며 쌓은 생각들을 공유하고 싶습니다.'
-            }
-        ]
-    }
-    
-    # 자소서 평가 실행
-    result = evaluator.evaluate_resume(user_resume_data)
+        # 평가기 초기화
+        evaluator = ResumeEvaluator('jobkorea_keyword_analysis.csv')
+        
+        # 자소서 평가 실행
+        result = evaluator.evaluate_resume(data)
+        
+        if result is None:
+            return jsonify({'error': '평가를 완료할 수 없습니다.'}), 400
+            
+        return jsonify(result)
 
-    if result is not None:
-        print("\n=== 자소서 평가 결과 ===")
-        print(f"총점: {result['평균점수']}점")
-        print(f"등급: {result['등급']}")
-        print("\n=== 상세 결과 ===")
-        for item in result['상세결과']:
-            print(f"\n[질문 {item['질문번호']}] 점수: {item['종합점수']}점")
-            print(f"질문: {item['사용자질문']}")
-            print(f"답변: {item['사용자답변']}")
-            print(f"유사한 질문: {item['가장유사한질문']}")
-            print(f"매칭된 키워드: {item['매칭된키워드']}")
-            print(f"매칭된 키워드 수: {item['매칭된키워드수']}")
-            print("-" * 50)
-    else:
-        print("\n❌ 평가를 완료할 수 없습니다.")
-
+    except Exception as e:
+        return jsonify({'error': f'평가 중 오류가 발생했습니다: {str(e)}'}), 500
 
 if __name__ == "__main__":
-    main()
+    app.run(host='0.0.0.0', port=5000, debug=True)

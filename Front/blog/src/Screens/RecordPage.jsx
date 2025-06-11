@@ -24,6 +24,13 @@ const RecordPage = () => {
     navigate(`/resume/assay/record/${assay_id}`);
   };
 
+  const getGradeColor = (score) => {
+    if (score >= 80) return '#22c55e'; // 우수
+    if (score >= 60) return '#3b82f6'; // 보통
+    if (score >= 40) return '#f59e0b'; // 미흡
+    return '#ef4444'; // 부족
+  };
+
   return (
     <div className="record-container">
       <div className="record-content">
@@ -47,7 +54,14 @@ const RecordPage = () => {
                 <p className="record-date">날짜: {record.record_date ? record.record_date.split('T')[0] : ''}</p>
                 <p className="record-job">직업: {record.job}</p>
                 <p className="record-state">경력: {record.state}</p>
-                <p className="record-score">점수: {record.score}</p>
+                <div className="score-section">
+                  <p className="record-score" style={{ color: getGradeColor(record.score) }}>
+                    평균 점수: {record.score}점
+                  </p>
+                  <p className="record-grade" style={{ color: getGradeColor(record.score) }}>
+                    등급: {record.grade}
+                  </p>
+                </div>
               </div>
             ))
           )}

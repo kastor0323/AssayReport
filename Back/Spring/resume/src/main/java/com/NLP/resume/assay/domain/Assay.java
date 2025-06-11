@@ -32,6 +32,9 @@ public class Assay {
   @Column(nullable = false)
   private double score;
 
+  @Column(nullable = false)
+  private String grade;
+
   @Column(length = 100, nullable = false)
   private String job;
 
@@ -50,6 +53,9 @@ public class Assay {
 
   @Column(columnDefinition = "LONGTEXT", nullable = false)
   private String answers; // "답변1|||답변2|||답변3" 형태
+
+  @Column(columnDefinition = "TEXT")
+  private String evaluation_details;
 }
 
 
