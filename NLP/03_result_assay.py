@@ -159,7 +159,8 @@ class ResumeEvaluator:
     
     def find_best_matching_question(self, user_question, job_title, position):
         """사용자 질문과 가장 유사한 합격 자소서 질문 찾기"""
-        # 해당 직무/직위 데이터 필터링
+        # 정규화 제거: 입력값 그대로 사용
+        # 해당 직무/직위 데이터 필터링 (정확한 매칭)
         filtered_df = self.reference_df[
             (self.reference_df['직무'] == job_title) & 
             (self.reference_df['직위'] == position)
@@ -170,7 +171,6 @@ class ResumeEvaluator:
             available_jobs = self.reference_df.groupby(['직무', '직위']).size().reset_index(name='count')
             print("\n📋 사용 가능한 직무/직위:")
             for _, row in available_jobs.iterrows():
-                # Display core keywords available for each job/position
                 keywords_for_job = self.reference_df[
                     (self.reference_df['직무'] == row['직무']) &
                     (self.reference_df['직위'] == row['직위'])
@@ -182,15 +182,25 @@ class ResumeEvaluator:
         best_match_keyword = None
         best_match_data = None
         
+        # 지원동기, 회사선택 등 핵심 키워드 우선 매칭
+        priority_keywords = ['지원동기', '회사선택', '입사동기']
+        for keyword in priority_keywords:
+            if keyword in user_question.lower():
+                matching_rows = filtered_df[filtered_df['핵심단어'] == keyword]
+                if not matching_rows.empty:
+                    best_match_keyword = keyword
+                    best_match_data = matching_rows.iloc[0]
+                    return best_match_keyword, 1.0, best_match_data
+        
+        # 일반적인 유사도 기반 매칭
         for idx, row in filtered_df.iterrows():
-            # Compare user_question with '핵심단어'
-            similarity = self.word_based_similarity(user_question, row['핵심단어']) # Changed column
+            similarity = self.word_based_similarity(user_question, row['핵심단어'])
             if similarity > max_similarity:
                 max_similarity = similarity
-                best_match_keyword = row['핵심단어'] # Changed to 핵심단어
+                best_match_keyword = row['핵심단어']
                 best_match_data = row
         
-        return best_match_keyword, max_similarity, best_match_data # Returned best_match_keyword
+        return best_match_keyword, max_similarity, best_match_data
     
     def calculate_keyword_matching_score(self, user_answer, reference_keywords):
         """키워드 매칭 점수 계산"""
@@ -206,13 +216,33 @@ class ResumeEvaluator:
         if not reference_keyword_set or not user_keyword_set:
             return 0.0, []
         
-        # Jaccard 유사도 계산
-        intersection = user_keyword_set.intersection(reference_keyword_set)
-        union = user_keyword_set.union(reference_keyword_set)
+        # 매칭된 키워드 수 계산
+        matched_keywords = user_keyword_set.intersection(reference_keyword_set)
+        matched_count = len(matched_keywords)
         
-        jaccard_score = len(intersection) / len(union) if union else 0
+        # 점수 계산 방식 변경
+        # 20개 중 매칭된 키워드 수에 따라 점수 부여
+        # 16개 이상: 100점
+        # 12-15개: 80-95점
+        # 8-11개: 60-75점
+        # 4-7개: 40-55점
+        # 1-3개: 20-35점
+        # 0개: 0점
         
-        return jaccard_score, list(intersection)
+        if matched_count >= 16:
+            score = 100
+        elif matched_count >= 12:
+            score = 80 + (matched_count - 12) * 5
+        elif matched_count >= 8:
+            score = 60 + (matched_count - 8) * 5
+        elif matched_count >= 4:
+            score = 40 + (matched_count - 4) * 5
+        elif matched_count >= 1:
+            score = 20 + (matched_count - 1) * 5
+        else:
+            score = 0
+        
+        return score, list(matched_keywords)
     
     def evaluate_resume(self, user_data):
         """
@@ -273,18 +303,14 @@ class ResumeEvaluator:
                     user_answer, best_data['답변키워드_TOP20']
                 )
                 
-                # 키워드 매칭 점수를 10개 기준으로 조정
-                matched_keyword_count = len(matched_keywords)
-                total_score = min(matched_keyword_count * 10, 100)  # 10개 키워드 = 100점
-                
                 evaluation_results.append({
                     '질문번호': i + 1,
                     '사용자질문': user_question,
                     '사용자답변': user_answer[:50] + "..." if len(user_answer) > 50 else user_answer,
                     '가장유사한질문': best_keyword,
                     '매칭된키워드': ', '.join(matched_keywords),
-                    '매칭된키워드수': matched_keyword_count,
-                    '종합점수': round(total_score, 1)
+                    '매칭된키워드수': len(matched_keywords),
+                    '종합점수': round(keyword_score, 1)
                 })
             else:
                 evaluation_results.append({

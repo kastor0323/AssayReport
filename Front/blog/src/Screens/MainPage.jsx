@@ -38,6 +38,16 @@ const MainPage = ({ user }) => {
     });
   };
 
+  const handleRemoveQuestion = (index) => {
+    if (formData.questions.length > 1) {
+      const newQuestions = formData.questions.filter((_, i) => i !== index);
+      setFormData({
+        ...formData,
+        questions: newQuestions
+      });
+    }
+  };
+
   const evaluateResume = async (qa_pairs) => {
     try {
       const response = await axios.post(`${FLASK_SERVER_URL}/evaluate`, {
@@ -154,15 +164,26 @@ const MainPage = ({ user }) => {
             <div key={index} className="question-group">
               <div className="form-group">
                 <label htmlFor={`question-${index}`}>질문 {index + 1}</label>
-                <input
-                  type="text"
-                  id={`question-${index}`}
-                  name="question"
-                  value={q.question}
-                  onChange={(e) => handleChange(e, index)}
-                  placeholder="자소서 질문을 입력하세요"
-                  required
-                />
+                <div className="question-header">
+                  <input
+                    type="text"
+                    id={`question-${index}`}
+                    name="question"
+                    value={q.question}
+                    onChange={(e) => handleChange(e, index)}
+                    placeholder="자소서 질문을 입력하세요"
+                    required
+                  />
+                  {formData.questions.length > 1 && (
+                    <button
+                      type="button"
+                      className="remove-btn"
+                      onClick={() => handleRemoveQuestion(index)}
+                    >
+                      삭제
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="form-group">
                 <label htmlFor={`content-${index}`}>답변 {index + 1}</label>

@@ -9,7 +9,7 @@ from nltk.tag import pos_tag
 import random
 
 class KeywordExtractor:
-    def __init__(self, file_path='C:/Coding/WorkSpace/NLP/data/잡코리아_합격자소서.xlsx'):
+    def __init__(self, file_path='C:/Coding/WorkSpace/NLP_Project/NLP/data/잡코리아_합격자소서.xlsx'):
         self.file_path = file_path
         self.kiwi = Kiwi()
 
@@ -22,6 +22,22 @@ class KeywordExtractor:
             nltk.download('punkt')
             nltk.download('stopwords')
             nltk.download('averaged_perceptron_tagger')
+        
+        # 데이터 로드 및 회사명 추출
+        try:
+            df = pd.read_excel(self.file_path, engine='openpyxl')
+        except UnicodeDecodeError:
+            try:
+                df = pd.read_csv(self.file_path, delimiter='\t', encoding='cp949')
+            except:
+                df = pd.read_csv(self.file_path, delimiter='\t', encoding='euc-kr')
+        
+        # 회사명, 직무명, 부서명 추출
+        self.company_exceptions = {
+            '회사명': df['회사명'].unique().tolist() if '회사명' in df.columns else [],
+            '직무명': df['직무'].unique().tolist() if '직무' in df.columns else [],
+            '부서명': df['부서'].unique().tolist() if '부서' in df.columns else []
+        }
         
         # 자소서 핵심 질문 키워드 (이미지 참고 및 일반적인 자소서 질문)
         self.common_question_keywords = [
@@ -38,7 +54,7 @@ class KeywordExtractor:
         ]
 
     def clean_text(self, text):
-        """텍스트 정제 - null bytes 제거"""
+        """텍스트 정제 - null bytes 제거 및 회사명 예외 처리"""
         if pd.isna(text) or text == '':
             return ''
         
@@ -47,6 +63,11 @@ class KeywordExtractor:
         text_str = text_str.replace('\x00', '')
         text_str = text_str.replace('\0', '')
         
+        # 회사명 예외 처리
+        for category, exceptions in self.company_exceptions.items():
+            for exception in exceptions:
+                text_str = text_str.replace(exception, f'[{category}]')
+        
         return text_str.strip()
     
     def extract_words(self, text):
@@ -54,13 +75,16 @@ class KeywordExtractor:
         if not text:
             return []
         
-        # null bytes 제거
+        # null bytes 제거 및 회사명 예외 처리
         text = self.clean_text(text)
         
         # 한글, 영어, 공백 제외 문자 제거
         cleaned = re.sub(r'[^\uAC00-\uD7A3a-zA-Z\s]', ' ', text)
         cleaned = re.sub(r'\s+', ' ', cleaned).strip().lower()
         words = cleaned.split()
+        
+        # 회사명 예외 처리된 단어는 제외
+        words = [word for word in words if not word.startswith('[') and not word.endswith(']')]
         
         # 너무 짧은 단어 및 특정 단어 제거 (1글자 단어, '공사' 제외)
         words = [word for word in words if len(word) >= 2 and word != '공사']
@@ -118,7 +142,17 @@ class KeywordExtractor:
         words = self.extract_words(text)
         
         # 불용어 제거 (한국어)
-        korean_stopwords = {'이', '그', '저', '것', '수', '때', '등', '및', '또는', '하여', '하는', '되는', '있는', '없는', '위해', '통해', '대해', '관해', '대한', '관한', '있어', '없어', '해서', '해야', '하고', '하며', '하는', '되고', '되며', '되는', '시에', '경우', '같은', '다른', '이런', '그런', '저런', '어떤', '무엇', '언제', '어디', '어떻게', '왜', '누구'}
+        korean_stopwords = {
+            '이', '그', '저', '것', '수', '때', '등', '및', '또는', '하여', '하는', '되는', '있는', '없는', 
+            '위해', '통해', '대해', '관해', '대한', '관한', '있어', '없어', '해서', '해야', '하고', '하며', 
+            '하는', '되고', '되며', '되는', '시에', '경우', '같은', '다른', '이런', '그런', '저런', '어떤', 
+            '무엇', '언제', '어디', '어떻게', '왜', '누구',
+            # 의존명사 추가
+            '때문', '확인해보니깐', '확인해보니', '확인해보면', '확인해보니깐', '확인해보니깐', '확인해보니깐',
+            '때문에', '때문이다', '때문이', '때문이었다', '때문이었', '때문이었던', '때문이었고',
+            '확인해보니깐', '확인해보니깐', '확인해보니깐', '확인해보니깐', '확인해보니깐',
+            '확인해보니깐', '확인해보니깐', '확인해보니깐', '확인해보니깐', '확인해보니깐'
+        }
         
         # 불용어 제거하고 상위 단어들만 사용
         filtered_words = [word for word in words if word not in korean_stopwords and len(word) >= 2]
@@ -276,11 +310,11 @@ class KeywordExtractor:
                     print(f"    해당 직무/직위에서 매칭되는 자소서 질문이 없습니다. 스킵합니다.")
                     continue
 
-                # 가장 많이 나오는 질문 5개 선택
-                top_5_questions = question_answer_map.most_common(5)
-                print(f"    상위 5개 질문 키워드: {top_5_questions}")
+                # 가장 많이 나오는 질문 10개 선택
+                top_10_questions = question_answer_map.most_common(10)
+                print(f"    상위 10개 질문 키워드: {top_10_questions}")
                 
-                for rank, (question_keyword, count) in enumerate(top_5_questions, 1):
+                for rank, (question_keyword, count) in enumerate(top_10_questions, 1):
                     all_matched_answers = question_answers_pool[question_keyword]
                     # 답변이 너무 많으면 일부만 추출하여 키워드 추출 성능 향상
                     if len(all_matched_answers) > 100: # 예시: 100개 초과 시 랜덤 100개 선택

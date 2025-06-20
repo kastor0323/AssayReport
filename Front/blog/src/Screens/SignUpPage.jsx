@@ -115,7 +115,7 @@ const SignUpPage = ({ onLogin }) => {
           <button type="submit" className="auth-btn">회원가입</button>
         </form>
         <div className="auth-link">
-          이미 계정이 있으신가요? <Link to="/login">로그인</Link>
+          이미 계정이 있으신가요? <Link to="/resume/login">로그인</Link>
         </div>
       </div>
     </div>

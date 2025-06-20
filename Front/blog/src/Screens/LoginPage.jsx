@@ -84,7 +84,7 @@ const LoginPage = ({ onLogin }) => {
           <button type="submit" className="auth-btn">로그인</button>
         </form>
         <div className="auth-link">
-          계정이 없으신가요? <Link to="/signup">회원가입</Link>
+          계정이 없으신가요? <Link to="/resume/signup">회원가입</Link>
         </div>
       </div>
     </div>
