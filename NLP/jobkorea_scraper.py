@@ -16,6 +16,7 @@ import datetime
 from urllib.parse import urljoin, urlparse
 import logging
 import getpass
+import json
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,7 +33,40 @@ class JobkoreaScraper:
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
         })
+        self.load_company_data()
+
+    def load_company_data(self):
+        """100대 기업 데이터 로드"""
+        try:
+            with open('./data/top_100_companies.json', 'r', encoding='utf-8') as f:
+                self.industry_data = json.load(f)
+            
+            # 검색을 용이하게 하기 위해 평탄화된 기업-산업 맵 생성
+            self.company_to_industry = {}
+            for industry, companies in self.industry_data.items():
+                for co in companies:
+                    self.company_to_industry[co['name']] = industry
+            logger.info(f"100대 기업 데이터 로드 완료 ({len(self.company_to_industry)}개 기업)")
+        except Exception as e:
+            logger.error(f"기업 데이터 로드 오류: {e}")
+            self.company_to_industry = {}
+
+    def get_industry_by_company(self, company_name):
+        """회사명으로 산업군 찾기"""
+        if not company_name:
+            return "기타"
         
+        # 정확히 일치하는 경우
+        if company_name in self.company_to_industry:
+            return self.company_to_industry[company_name]
+        
+        # 부분 일치 확인 (예: '삼성전자(주)' -> '삼성전자')
+        for co_name, industry in self.company_to_industry.items():
+            if co_name in company_name or company_name in co_name:
+                return industry
+        
+        return "기타"
+
     def login_to_jobkorea(self, user_id, password):
         """잡코리아 로그인"""
         try:
@@ -458,7 +492,11 @@ class JobkoreaScraper:
                 essay_data['essay_id'] = essay_url.split("/View/")[-1].split("?")[0]
             
             # 회사명 추출 - NLP_Project 방식
-            essay_data['company'] = self.extract_company_name_from_link(soup)
+            company_name = self.extract_company_name_from_link(soup)
+            essay_data['company'] = company_name
+            
+            # 산업군 매핑
+            essay_data['industry'] = self.get_industry_by_company(company_name)
             
             # 직무 관련 텍스트 추출 - NLP_Project 방식
             position_text = self.extract_position_text_from_em(soup)
@@ -610,6 +648,7 @@ def save_to_excel(essays, save_directory='./data/', start_page=1, end_page=10):
             for i, (question, answer) in enumerate(zip(essay['questions'], essay['answers'])):
                 df_data.append({
                     '회사명': essay['company'],
+                    '산업분야': essay.get('industry', '기타'),
                     '기간': essay['year_period'], 
                     '직위': essay['status'],
                     '직무': essay['job'],
@@ -731,7 +770,8 @@ def save_to_excel(essays, save_directory='./data/', start_page=1, end_page=10):
 def main():
     """메인 실행 함수"""
     # 설정
-    save_directory = './data/'
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    save_directory = os.path.join(base_dir, 'data')
     os.makedirs(save_directory, exist_ok=True)
     
     # 로그인 정보 입력받기

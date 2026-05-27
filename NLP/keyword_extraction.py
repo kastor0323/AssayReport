@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from kiwipiepy import Kiwi
 from collections import Counter
@@ -9,7 +10,10 @@ from nltk.tag import pos_tag
 import random
 
 class KeywordExtractor:
-    def __init__(self, file_path='C:/Coding/WorkSpace/NLP_Project/NLP/data/잡코리아_합격자소서.xlsx'):
+    def __init__(self, file_path=None):
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        if file_path is None:
+            file_path = os.path.join(base_dir, 'data', '잡코리아_합격자소서.xlsx')
         self.file_path = file_path
         self.kiwi = Kiwi()
 
@@ -44,7 +48,7 @@ class KeywordExtractor:
             '지원동기', '성장과정', '장단점', '입사포부', '자기소개',
             '경험', '도전', '극복', '협업', '리더십', '실패', '갈등',
             '직무역량', '전공', '취업준비', '회사선택', '미래계획', '비전', '핵심역량',
-            '강점', '약점', '역량', '직무', '성격', '가치관', '문제해결', '성공', '실패',
+            '강점', '약점', '역량', '직무', '성격', '가치관', '문제해결', '성공',
             # 추가: 이미지에서 보이는 '성장과정' 키워드와 관련된 일반적인 질문
             '본인의 강점', '본인의 약점', '가장 힘들었던 경험', '가장 어려웠던 일', '가장 보람있었던 경험',
             '직무 수행', '직무 관련', '인턴 경험', '프로젝트 경험', '어학연수', '학업 경험',
@@ -52,6 +56,43 @@ class KeywordExtractor:
             '윤리의식', '도덕성', '가치관', '인생관', '삶의 목표', '존경하는 인물',
             '지원 직무', '입사 후 목표', '10년 후 모습', '회사에 기여할 수 있는 점'
         ]
+
+        # 카테고리 매핑 사전 (Vague/Specific sub-keywords -> Consolidated Categories)
+        self.category_map = {
+            # 경험 관련
+            '경험': '경험', '도전': '경험', '극복': '경험', '협업': '경험', '리더십': '경험',
+            '실패': '경험', '갈등': '경험', '문제해결': '경험', '성공': '경험',
+            '가장 힘들었던 경험': '경험', '가장 어려웠던 일': '경험', '가장 보람있었던 경험': '경험',
+            '인턴 경험': '경험', '프로젝트 경험': '경험', '어학연수': '경험', '학업 경험': '경험',
+            '사회생활': '경험', '조직생활': '경험', '팀워크': '경험', '소통': '경험',
+            '리더': '경험', '팔로워': '경험', '변화': '경험', '혁신': '경험',
+            
+            # 지원동기 관련
+            '지원동기': '지원동기', '회사선택': '지원동기',
+            
+            # 성장과정 관련
+            '성장과정': '성장과정',
+            
+            # 장단점 관련
+            '장단점': '장단점', '성격': '장단점', '강점': '장단점', '약점': '장단점',
+            '본인의 강점': '장단점', '본인의 약점': '장단점',
+            
+            # 입사포부 관련
+            '입사포부': '입사포부', '미래계획': '입사포부', '비전': '입사포부',
+            '입사 후 목표': '입사포부', '10년 후 모습': '입사포부', '회사에 기여할 수 있는 점': '입사포부',
+            
+            # 직무역량 관련
+            '직무역량': '직무역량', '역량': '직무역량', '직무': '직무역량', '전공': '직무역량',
+            '취업준비': '직무역량', '핵심역량': '직무역량', '직무 수행': '직무역량', '직무 관련': '직무역량',
+            '지원 직무': '직무역량',
+            
+            # 자기소개 관련
+            '자기소개': '자기소개',
+            
+            # 가치관 관련
+            '가치관': '가치관', '윤리의식': '가치관', '도덕성': '가치관', '인생관': '가치관',
+            '삶의 목표': '가치관', '존경하는 인물': '가치관'
+        }
 
     def clean_text(self, text):
         """텍스트 정제 - null bytes 제거 및 회사명 예외 처리"""
@@ -261,7 +302,7 @@ class KeywordExtractor:
         return [word for word, count in counter.most_common(top_n)]
 
     def analyze_jobkorea_data(self):
-        """직무-직위별 핵심 질문 단어 기반 그룹화, 상위 5개 질문 선택, 해당 답변의 상위 20개 키워드 추출"""
+        """산업분야-직무-직위별 핵심 질문 단어 기반 그룹화, 상위 5개 질문 선택, 해당 답변의 상위 20개 키워드 추출"""
         
         # 데이터 로드
         try:
@@ -278,59 +319,78 @@ class KeywordExtractor:
         df = df.fillna('')
         
         separate_results = []
-        job_groups = df.groupby('직무')
-        print(f"\n총 {len(job_groups)}개 직무 발견")
         
-        for job_name, job_group in job_groups:
-            position_groups = job_group.groupby('직위')
-            print(f"\n[{job_name}] {len(position_groups)}개 직위")
+        # 산업분야가 없으면 '기타'로 채움
+        if '산업분야' not in df.columns:
+            df['산업분야'] = '기타'
+
+        industry_groups = df.groupby('산업분야')
+        print(f"\n총 {len(industry_groups)}개 산업분야 발견")
+        
+        for industry_name, industry_group in industry_groups:
+            print(f"\n[{industry_name}] 분석 중...")
+            job_groups = industry_group.groupby('직무')
             
-            for position_name, position_group in position_groups:
-                print(f"  - {position_name}: {len(position_group)}개 데이터")
+            for job_name, job_group in job_groups:
+                position_groups = job_group.groupby('직위')
                 
-                # 질문 핵심 단어별 답변 집계
-                question_answer_map = Counter()
-                question_answers_pool = {keyword: [] for keyword in self.common_question_keywords}
-                
-                for _, row in position_group.iterrows():
-                    question_content = self.clean_text(row['질문'])
-                    answer_content = self.clean_text(row['답변'])
+                for position_name, position_group in position_groups:
+                    print(f"  - {job_name} / {position_name}: {len(position_group)}개 데이터")
                     
-                    matched_keyword = None
-                    for keyword in self.common_question_keywords:
-                        if keyword in question_content:
-                            matched_keyword = keyword
-                            break
+                    # 질문 카테고리별 답변 집계
+                    question_answer_map = Counter()
+                    unique_categories = set(self.category_map.values())
+                    question_answers_pool = {cat: [] for cat in unique_categories}
                     
-                    if matched_keyword:
-                        question_answer_map[matched_keyword] += 1
-                        question_answers_pool[matched_keyword].append(answer_content)
+                    for _, row in position_group.iterrows():
+                        question_content = self.clean_text(row['질문'])
+                        answer_content = self.clean_text(row['답변'])
+                        
+                        matched_keyword = None
+                        for keyword in self.common_question_keywords:
+                            if keyword in question_content:
+                                matched_keyword = keyword
+                                break
+                        
+                        if matched_keyword and matched_keyword in self.category_map:
+                            mapped_cat = self.category_map[matched_keyword]
+                            question_answer_map[mapped_cat] += 1
+                            question_answers_pool[mapped_cat].append(answer_content)
 
-                if not question_answer_map:
-                    print(f"    해당 직무/직위에서 매칭되는 자소서 질문이 없습니다. 스킵합니다.")
-                    continue
+                    if not question_answer_map:
+                        continue
 
-                # 가장 많이 나오는 질문 10개 선택
-                top_10_questions = question_answer_map.most_common(10)
-                print(f"    상위 10개 질문 키워드: {top_10_questions}")
-                
-                for rank, (question_keyword, count) in enumerate(top_10_questions, 1):
-                    all_matched_answers = question_answers_pool[question_keyword]
-                    # 답변이 너무 많으면 일부만 추출하여 키워드 추출 성능 향상
-                    if len(all_matched_answers) > 100: # 예시: 100개 초과 시 랜덤 100개 선택
-                        all_matched_answers = random.sample(all_matched_answers, 100)
-
-                    extracted_keywords = self.extract_keywords_multilingual(all_matched_answers, top_n=20)
-                    keywords_text = ', '.join(extracted_keywords) if extracted_keywords else ''
+                    # 가장 많이 나오는 카테고리 선택
+                    top_10_questions = question_answer_map.most_common(10)
                     
-                    separate_results.append({
-                        '직무': job_name,
-                        '직위': position_name,
-                        '질문순위': rank,
-                        '핵심단어': question_keyword,
-                        '질문빈도': count,
-                        '답변키워드_TOP20': keywords_text
-                    })
+                    for rank, (question_keyword, count) in enumerate(top_10_questions, 1):
+                        all_matched_answers = question_answers_pool[question_keyword]
+                        if len(all_matched_answers) > 100:
+                            all_matched_answers = random.sample(all_matched_answers, 100)
+
+                        extracted_keywords = self.extract_keywords_multilingual(all_matched_answers, top_n=20)
+                        keywords_text = ', '.join(extracted_keywords) if extracted_keywords else ''
+                        
+                        separate_results.append({
+                            '산업분야': industry_name,
+                            '직무': job_name,
+                            '직위': position_name,
+                            '질문순위': rank,
+                            '핵심단어': question_keyword,
+                            '질문빈도': count,
+                            '답변키워드_TOP20': keywords_text
+                        })
+        
+        # 결과를 DataFrame으로 변환
+        result_df = pd.DataFrame(separate_results)
+        output_file = 'jobkorea_keyword_analysis.csv'
+        result_df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        
+        print(f"\n=== 분석 완료 ===")
+        print(f"결과가 '{output_file}' 파일로 저장되었습니다.")
+        print(f"총 {len(separate_results)}개의 개별 질문 행이 생성되었습니다.")
+        
+        return result_df
         
         # 결과를 DataFrame으로 변환
         result_df = pd.DataFrame(separate_results)

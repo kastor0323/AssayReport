@@ -50,7 +50,7 @@ const MainPage = ({ user }) => {
 
   const evaluateResume = async (qa_pairs) => {
     try {
-      const response = await axios.post(`${FLASK_SERVER_URL}/evaluate`, {
+      const response = await axios.post(`${FLASK_SERVER_URL}/api/evaluate-with-suggestions`, {
         직무: formData.jobTitle,
         직위: formData.experience,
         qa_pairs: qa_pairs
