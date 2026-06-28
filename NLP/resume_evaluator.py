@@ -43,20 +43,14 @@ class ResumeEvaluator:
             nltk.download('averaged_perceptron_tagger')
 
     def load_company_vision_data(self, base_dir):
-        """100대 기업 비전 데이터 로드"""
+        """기업 비전 데이터 로드"""
         try:
-            json_path = os.path.join(base_dir, 'data', 'top_100_companies.json')
+            json_path = os.path.join(base_dir, 'data', 'companies.json')
             with open(json_path, 'r', encoding='utf-8') as f:
-                self.company_vision_data = json.load(f)
-            
-            # 기업명-정보 맵 생성
-            self.company_info_map = {}
-            for industry, companies in self.company_vision_data.items():
-                for co in companies:
-                    co['industry'] = industry
-                    self.company_info_map[co['name']] = co
-            
-            print(f"100대 기업 비전 데이터 로드 완료 ({len(self.company_info_map)}개 기업)")
+                companies = json.load(f)
+
+            self.company_info_map = {co['name']: co for co in companies}
+            print(f"기업 비전 데이터 로드 완료 ({len(self.company_info_map)}개 기업)")
         except Exception as e:
             print(f"기업 비전 데이터 로드 오류: {e}")
             self.company_info_map = {}

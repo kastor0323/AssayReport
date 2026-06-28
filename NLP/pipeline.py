@@ -141,8 +141,8 @@ def main():
         
         print("\n✅ 키워드 분석 및 매칭 프로세스 완료!")
         
-        output_csv = os.path.join(base_dir, "data", "key_words_analysis.csv")
-        output_json = os.path.join(base_dir, "data", "key_words_analysis.json")
+        output_csv = os.path.join(base_dir, "data", "job_keywords_analysis.csv")
+        output_json = os.path.join(base_dir, "data", "job_keywords_analysis.json")
         
         print(f"📁 결과물 경로:")
         print(f"   - CSV 결과: {output_csv}")

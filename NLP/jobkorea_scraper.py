@@ -19,9 +19,12 @@ import logging
 import getpass
 import json
 
-# 로깅 설정 asdf
+# 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# 수집 기간: 최근 3년 이내 (스크랩 연도 - 3, 해당 연도 포함)
+CUTOFF_YEAR = datetime.datetime.now().year - 3
 
 class JobkoreaScraper:
     def __init__(self):
@@ -37,36 +40,31 @@ class JobkoreaScraper:
         self.load_company_data()
 
     def load_company_data(self):
-        """100대 기업 데이터 로드"""
+        """기업 데이터 로드"""
         try:
-            with open('./data/top_100_companies.json', 'r', encoding='utf-8') as f:
-                self.industry_data = json.load(f)
-            
-            # 검색을 용이하게 하기 위해 평탄화된 기업-산업 맵 생성
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            json_path = os.path.join(base_dir, 'data', 'companies.json')
+            with open(json_path, 'r', encoding='utf-8') as f:
+                companies = json.load(f)
+
             self.company_to_industry = {}
-            for industry, companies in self.industry_data.items():
-                for co in companies:
-                    self.company_to_industry[co['name']] = industry
-            logger.info(f"100대 기업 데이터 로드 완료 ({len(self.company_to_industry)}개 기업)")
+            for co in companies:
+                self.company_to_industry[co['name']] = co['industry']
+            logger.info(f"기업 데이터 로드 완료 ({len(self.company_to_industry)}개 기업)")
         except Exception as e:
             logger.error(f"기업 데이터 로드 오류: {e}")
             self.company_to_industry = {}
 
     def get_industry_by_company(self, company_name):
-        """회사명으로 산업군 찾기"""
+        """회사명으로 산업군 찾기. Top 100 기업이 아니면 None 반환."""
         if not company_name:
-            return "기타"
-        
-        # 정확히 일치하는 경우
+            return None
         if company_name in self.company_to_industry:
             return self.company_to_industry[company_name]
-        
-        # 부분 일치 확인 (예: '삼성전자(주)' -> '삼성전자')
         for co_name, industry in self.company_to_industry.items():
             if co_name in company_name or company_name in co_name:
                 return industry
-        
-        return "기타"
+        return None
 
     def login_to_jobkorea(self, user_id, password):
         """잡코리아 로그인"""
@@ -495,9 +493,13 @@ class JobkoreaScraper:
             # 회사명 추출 - NLP_Project 방식
             company_name = self.extract_company_name_from_link(soup)
             essay_data['company'] = company_name
-            
-            # 산업군 매핑
-            essay_data['industry'] = self.get_industry_by_company(company_name)
+
+            # Top 100 기업 필터: 해당 기업이 아니면 스킵
+            industry = self.get_industry_by_company(company_name)
+            if not industry:
+                logger.info(f"Top 100 기업 아님 (스킵): {company_name}")
+                return None
+            essay_data['industry'] = industry
             
             # 직무 관련 텍스트 추출 - NLP_Project 방식
             position_text = self.extract_position_text_from_em(soup)
@@ -514,6 +516,14 @@ class JobkoreaScraper:
                 essay_data['year_period'] = ""
                 essay_data['status'] = ""
                 essay_data['job'] = ""
+
+            # 연도 필터: 스크랩 연도 기준 3년 이내만 수집 (해당 연도 포함)
+            year_match = re.search(r'(\d{4})', essay_data['year_period'])
+            if year_match:
+                essay_year = int(year_match.group(1))
+                if essay_year < CUTOFF_YEAR:
+                    logger.info(f"3년 범위 초과 (스킵): {essay_data['year_period']} (기준: {CUTOFF_YEAR}년 이상)")
+                    return None
             
             # 실제 자소서 Q&A만 추출 - NLP_Project 방식
             questions, answers = self.extract_clean_qa_pairs(soup)
@@ -592,7 +602,7 @@ class JobkoreaScraper:
                 return []
             
             logger.info("\n=== 합격자소서 페이지로 이동 ===")
-            base_url = "https://www.jobkorea.co.kr/starter/passassay?schTxt=&Page="
+            base_url = "https://www.jobkorea.co.kr/starter/PassAssay?schPart=&schWork=&schEduLevel=&schCType=13&schGroup=&isSaved=1&isFilterChecked=1&OrderBy=0&schTxt=&Page="
             
             for page in range(start_page, end_page + 1):
                 logger.info(f"\n페이지 {page}/{end_page} 처리 중...")
@@ -632,49 +642,42 @@ class JobkoreaScraper:
         return all_essays
 
 def save_to_excel(essays, save_directory='./data/', start_page=1, end_page=10):
-    """데이터를 Excel 파일로 저장"""
+    """데이터를 CSV/JSON으로 저장"""
     os.makedirs(save_directory, exist_ok=True)
-    
+
     if not essays:
         logger.warning("저장할 데이터가 없습니다.")
         return
-    
-    # 데이터 변환 - 사용자가 요청한 구조로
+
     df_data = []
     successful_essays = 0
-    
+
     for essay in essays:
         if essay and essay['questions'] and essay['answers']:
             successful_essays += 1
-            for i, (question, answer) in enumerate(zip(essay['questions'], essay['answers'])):
+            for question, answer in zip(essay['questions'], essay['answers']):
                 df_data.append({
                     '회사명': essay['company'],
-                    '산업분야': essay.get('industry', '기타'),
-                    '기간': essay['year_period'], 
-                    '직위': essay['status'],
-                    '직무': essay['job'],
-                    '질문번호': f'Q{i + 1}',
-                    '질문': question,
+                    '연도': essay['year_period'],
+                    '직무분야': essay.get('industry', '기타'),
+                    '직무명': essay['job'],
+                    '질문 내용': question,
                     '답변': answer,
-                    'URL': essay['url'],
-                    'Essay_ID': essay['essay_id']
                 })
-    
+
     if not df_data:
         logger.warning("변환할 데이터가 없습니다.")
         return
-    
+
     df = pd.DataFrame(df_data)
-    
-    # 데이터 품질 분석
+
     logger.info(f"\n=== 데이터 품질 상세 분석 ===")
     logger.info(f"총 행 수: {len(df)}")
     logger.info(f"성공적으로 처리된 자소서: {successful_essays}/{len(essays)}")
-    
-    # 회사명 분석
+
     companies_filled = df[df['회사명'].str.len() > 0]
     logger.info(f"회사명 채워진 행: {len(companies_filled)}/{len(df)} ({len(companies_filled)/len(df)*100:.1f}%)")
-    
+
     if len(companies_filled) > 0:
         unique_companies = df['회사명'].value_counts()
         logger.info(f"유니크 회사 수: {len(unique_companies)}")
@@ -682,91 +685,68 @@ def save_to_excel(essays, save_directory='./data/', start_page=1, end_page=10):
         for company, count in unique_companies.head(5).items():
             if company:
                 logger.info(f"  - {company}: {count}개 문항")
-    
-    # 질문/답변 길이 분석
-    avg_question_len = df['질문'].str.len().mean()
+
+    avg_question_len = df['질문 내용'].str.len().mean()
     avg_answer_len = df['답변'].str.len().mean()
     logger.info(f"평균 질문 길이: {avg_question_len:.0f}자")
     logger.info(f"평균 답변 길이: {avg_answer_len:.0f}자")
-    
-    # Excel 파일 저장
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    # 타임스탬프 포함된 파일
-    excel_filename_detailed = f'잡코리아_합격자소서_p{start_page}-{end_page}_{timestamp}.xlsx'
-    excel_path_detailed = os.path.join(save_directory, excel_filename_detailed)
-    
-    # 고정된 파일명 (기존 데이터와 병합)
-    excel_filename_simple = '잡코리아_합격자소서.xlsx'
-    excel_path_simple = os.path.join(save_directory, excel_filename_simple)
-    
-    if os.path.exists(excel_path_simple):
-        # 기존 데이터 불러오기
-        existing_df = pd.read_excel(excel_path_simple)
-        logger.info(f"\n기존 데이터 {len(existing_df)}행 + 신규 데이터 {len(df)}행 → 병합 중...")
-        combined_df = pd.concat([existing_df, df], ignore_index=True)
+
+    # 기존 CSV 로드 후 누적 병합
+    csv_path = os.path.join(save_directory, 'jobkorea_scraping_result.csv')
+
+    COLS = ['회사명', '연도', '직무분야', '직무명', '질문 내용', '답변']
+
+    if os.path.exists(csv_path):
+        try:
+            existing_df = pd.read_csv(csv_path, encoding='utf-8-sig')
+            if set(COLS).issubset(set(existing_df.columns)):
+                existing_df = existing_df[COLS]
+                logger.info(f"\n기존 데이터 {len(existing_df)}행 + 신규 데이터 {len(df)}행 → 병합 중...")
+                combined_df = pd.concat([existing_df, df[COLS]], ignore_index=True)
+            else:
+                logger.warning("기존 CSV 컬럼 불일치 (구 버전). 새로 생성합니다.")
+                combined_df = df[COLS]
+        except Exception as e:
+            logger.error(f"기존 CSV 로드 실패, 새로 생성합니다: {e}")
+            combined_df = df[COLS]
     else:
-        combined_df = df
-        logger.info("\n최초 Excel 파일 생성")
-    
-    # Essay_ID 기준 중복 제거
+        combined_df = df[COLS]
+        logger.info("\n최초 파일 생성")
+
     before_dedup = len(combined_df)
-    combined_df = combined_df.drop_duplicates(subset=['Essay_ID'], keep='first')
+    combined_df = combined_df.drop_duplicates(subset=['회사명', '연도', '직무명', '질문 내용'], keep='first')
     after_dedup = len(combined_df)
     removed_count = before_dedup - after_dedup
-    
+
     if removed_count > 0:
-        logger.info(f"🔍 중복 데이터 {removed_count}행 제거 → 최종 {after_dedup}행")
+        logger.info(f"중복 데이터 {removed_count}행 제거 → 최종 {after_dedup}행")
     else:
         logger.info(f"중복 데이터 없음 → 최종 {after_dedup}행")
-    
-    # Excel 파일로 저장 (열 너비 자동 조정)
-    with pd.ExcelWriter(excel_path_detailed, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name='합격자소서', index=False)
-        
-        # 워크시트 가져오기
-        worksheet = writer.sheets['합격자소서']
-        
-        # 열 너비 자동 조정
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            
-            # 최대 너비 50으로 제한
-            adjusted_width = min(max_length + 2, 50)
-            worksheet.column_dimensions[column_letter].width = adjusted_width
-    
-    # 누적 데이터 파일 저장
-    with pd.ExcelWriter(excel_path_simple, engine='openpyxl') as writer:
-        combined_df.to_excel(writer, sheet_name='합격자소서', index=False)
-        
-        # 워크시트 가져오기
-        worksheet = writer.sheets['합격자소서']
-        
-        # 열 너비 자동 조정
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            
-            # 최대 너비 50으로 제한
-            adjusted_width = min(max_length + 2, 50)
-            worksheet.column_dimensions[column_letter].width = adjusted_width
-    
-    logger.info(f"\n💾 Excel 파일 저장 완료:")
-    logger.info(f"   📄 상세 파일: {excel_filename_detailed} (신규 데이터만)")
-    logger.info(f"   📄 기본 파일: {excel_filename_simple} (누적 데이터 {after_dedup}행)")
+
+    # CSV 저장 (NaN → 빈 문자열로 정규화)
+    combined_df = combined_df.fillna('')
+    combined_df[COLS].to_csv(csv_path, index=False, encoding='utf-8-sig')
+    logger.info(f"\n💾 파일 저장 완료:")
+    logger.info(f"   📄 CSV: jobkorea_scraping_result.csv (누적 {after_dedup}행)")
+
+    # JSON 저장 (회사+연도+직무명 단위로 그룹화)
+    json_path = os.path.join(save_directory, 'jobkorea_scraping_result.json')
+    json_records = []
+    for (company, year, job), group in combined_df.groupby(['회사명', '연도', '직무명'], sort=False):
+        qa_list = [
+            {'질문 내용': row['질문 내용'], '답변': row['답변']}
+            for _, row in group.iterrows()
+        ]
+        json_records.append({
+            '회사명': company,
+            '연도': year,
+            '직무분야': group.iloc[0]['직무분야'],
+            '직무명': job,
+            'qa': qa_list
+        })
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(json_records, f, ensure_ascii=False, indent=2)
+    logger.info(f"   📄 JSON: jobkorea_scraping_result.json ({len(json_records)}개 그룹)")
 
 def main():
     """메인 실행 함수"""

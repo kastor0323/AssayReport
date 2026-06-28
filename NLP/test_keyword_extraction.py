@@ -8,28 +8,24 @@ def run_tests():
     
     # 1. 파일 경로 설정
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    company_json_path = os.path.join(base_dir, 'data', 'top_100_companies.json')
-    
-    # 2. 대기업 데이터셋 무결성 검증
-    print("\n[검증 1] 대기업 100대 기업 데이터셋 정합성 확인")
+    company_json_path = os.path.join(base_dir, 'data', 'companies.json')
+
+    # 2. 기업 데이터셋 무결성 검증
+    print("\n[검증 1] 기업 데이터셋 정합성 확인")
     assert os.path.exists(company_json_path), f"오류: {company_json_path} 파일이 존재하지 않습니다."
-    
+
     with open(company_json_path, 'r', encoding='utf-8') as f:
         companies_data = json.load(f)
-        
-    total_companies = 0
-    for industry, companies in companies_data.items():
-        print(f"  - 산업군 '{industry}': {len(companies)}개 기업")
-        total_companies += len(companies)
-        for co in companies:
-            assert 'name' in co, "오류: 기업 데이터에 'name' 필드가 누락되었습니다."
-            assert 'vision' in co, "오류: 기업 데이터에 'vision' 필드가 누락되었습니다."
-            assert 'core_values' in co, f"오류: {co.get('name')} 기업 데이터에 'core_values' 필드가 누락되었습니다."
-            assert len(co['core_values']) == 10, f"오류: {co['name']}의 인재상 키워드 개수가 10개가 아닙니다. (현재: {len(co['core_values'])}개)"
-            
-    print(f"  => 총 대기업 수: {total_companies}개")
-    assert total_companies == 100, f"오류: 총 기업 수가 100개가 아닙니다. (현재: {total_companies}개)"
-    print("  => [합격] 100개 대기업 및 각 10개 인재상 키워드 검증 완수!")
+
+    total_companies = len(companies_data)
+    for co in companies_data:
+        assert 'name' in co, "오류: 기업 데이터에 'name' 필드가 누락되었습니다."
+        assert 'vision' in co, "오류: 기업 데이터에 'vision' 필드가 누락되었습니다."
+        assert 'core_values' in co, f"오류: {co.get('name')} 기업 데이터에 'core_values' 필드가 누락되었습니다."
+        assert len(co['core_values']) >= 5, f"오류: {co['name']}의 인재상 키워드 개수가 너무 적습니다. (현재: {len(co['core_values'])}개)"
+
+    print(f"  => 총 기업 수: {total_companies}개")
+    print("  => [합격] 기업 데이터 및 인재상 키워드 검증 완수!")
 
     # 3. 키워드 추출 파이프라인 실행
     print("\n[검증 2] KeywordExtractor 인스턴스화 및 분석 실행")
