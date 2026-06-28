@@ -6,6 +6,7 @@
 Python 3.13.3 호환
 """
 
+import argparse
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -769,38 +770,42 @@ def save_to_excel(essays, save_directory='./data/', start_page=1, end_page=10):
 
 def main():
     """메인 실행 함수"""
-    # 설정
+    parser = argparse.ArgumentParser(description="잡코리아 합격자소서 스크래핑")
+    parser.add_argument("--id", help="잡코리아 아이디")
+    parser.add_argument("--password", help="잡코리아 비밀번호")
+    parser.add_argument("--start", type=int, default=1, help="시작 페이지 (기본값: 1)")
+    parser.add_argument("--end", type=int, default=5, help="끝 페이지 (기본값: 5)")
+    args = parser.parse_args()
+
     base_dir = os.path.dirname(os.path.abspath(__file__))
     save_directory = os.path.join(base_dir, 'data')
     os.makedirs(save_directory, exist_ok=True)
-    
-    # 로그인 정보 입력받기
+
     print("=== 잡코리아 합격자소서 스크래핑 프로그램 ===")
     print("NLP_Project 방식 완전 통합 버전 (Python 3.13.3 호환)")
-    print("로그인 정보를 입력해주세요.\n")
-    
-    user_id = input("잡코리아 아이디: ").strip()
+
+    user_id = args.id
+    password = args.password
+
+    # 인자로 받지 못한 경우에만 대화형 입력
+    if not user_id:
+        print("로그인 정보를 입력해주세요.\n")
+        user_id = input("잡코리아 아이디: ").strip()
     if not user_id:
         print("❌ 아이디를 입력해주세요.")
         return
-    
-    password = getpass.getpass("잡코리아 비밀번호: ").strip()
+
+    if not password:
+        password = getpass.getpass("잡코리아 비밀번호: ").strip()
     if not password:
         print("❌ 비밀번호를 입력해주세요.")
         return
-    
-    # 스크래핑 페이지 범위 설정
-    print("\n스크래핑 범위를 설정해주세요.")
-    try:
-        start_page = int(input("시작 페이지 (기본값: 1): ") or "1")
-        end_page = int(input("끝 페이지 (기본값: 5): ") or "5")
-        
-        if start_page < 1 or end_page < start_page:
-            print("❌ 올바른 페이지 범위를 입력해주세요.")
-            return
-            
-    except ValueError:
-        print("❌ 숫자를 입력해주세요.")
+
+    start_page = args.start
+    end_page = args.end
+
+    if start_page < 1 or end_page < start_page:
+        print("❌ 올바른 페이지 범위를 입력해주세요.")
         return
     
     logger.info(f"\n=== 잡코리아 합격자소서 스크래핑 ({start_page}~{end_page}페이지) ===")
