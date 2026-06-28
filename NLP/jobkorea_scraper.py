@@ -23,7 +23,7 @@ import json
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# 수집 기간: 최근 3년 이내 (스크랩 연도 - 3, 해당 연도 포함)
+# 수집 기간: 최근 3년 이내 (스크랩 연도 - 3, 해당 연도 포함 )
 CUTOFF_YEAR = datetime.datetime.now().year - 3
 
 class JobkoreaScraper:
