@@ -7,6 +7,10 @@ import pandas as pd
 import time
 import getpass
 
+# Windows에서 venv 실행 시 stdout 인코딩이 cp949로 설정되는 문제 해결
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 def log_stream(stream, prefix):
     """실시간으로 프로세스의 출력을 콘솔에 로깅합니다."""
     try:
@@ -22,7 +26,8 @@ def run_scraper_process(cmd, prefix):
     """자식 프로세스를 실행하고 출력을 로깅 스레드로 연결합니다."""
     print(f"\n🚀 {prefix} 프로세스 시작: {' '.join(cmd)}")
     
-    # 윈도우 환경 및 인코딩 이슈를 고려하여 utf-8 및 오류 대체를 적용합니다.
+    # PYTHONUTF8=1로 자식 프로세스도 UTF-8로 출력하게 강제합니다.
+    child_env = {**os.environ, 'PYTHONUTF8': '1'}
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -30,7 +35,8 @@ def run_scraper_process(cmd, prefix):
         text=True,
         encoding='utf-8',
         errors='replace',
-        bufsize=1
+        bufsize=1,
+        env=child_env
     )
     
     # 실시간 로깅을 위한 데몬 스레드 시작
@@ -135,8 +141,8 @@ def main():
         
         print("\n✅ 키워드 분석 및 매칭 프로세스 완료!")
         
-        output_csv = os.path.join(base_dir, "data", "key_words_analysis.csv")
-        output_json = os.path.join(base_dir, "data", "key_words_analysis.json")
+        output_csv = os.path.join(base_dir, "data", "job_keywords_analysis.csv")
+        output_json = os.path.join(base_dir, "data", "job_keywords_analysis.json")
         
         print(f"📁 결과물 경로:")
         print(f"   - CSV 결과: {output_csv}")

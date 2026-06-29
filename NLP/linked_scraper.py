@@ -4,6 +4,7 @@ import time
 import json
 import logging
 import datetime
+import argparse
 import pandas as pd
 
 try:
@@ -11,11 +12,9 @@ try:
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.chrome.service import Service as ChromeService
-    from webdriver_manager.chrome import ChromeDriverManager
 except ImportError:
-    print("Selenium 또는 webdriver_manager 패키지가 설치되어 있지 않습니다.")
-    print("설치 명령어: pip install selenium webdriver-manager pandas openpyxl")
+    print("Selenium 패키지가 설치되어 있지 않습니다.")
+    print("설치 명령어: pip install selenium pandas openpyxl")
     exit()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,10 +37,7 @@ class LinkareerScraper:
             'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         )
         try:
-            self.driver = webdriver.Chrome(
-                service=ChromeService(ChromeDriverManager().install()),
-                options=self.options
-            )
+            self.driver = webdriver.Chrome(options=self.options)
             self.wait = WebDriverWait(self.driver, 15)
         except Exception as e:
             logger.error(f"Chrome WebDriver 초기화 실패: {e}")
@@ -50,17 +46,16 @@ class LinkareerScraper:
         self.load_company_data()
 
     def load_company_data(self):
-        """100대 기업 데이터 로드"""
+        """기업 데이터 로드"""
         self.company_to_industry = {}
         try:
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            json_path = os.path.join(base_dir, 'data', 'top_100_companies.json')
+            json_path = os.path.join(base_dir, 'data', 'companies.json')
             with open(json_path, 'r', encoding='utf-8') as f:
-                industry_data = json.load(f)
-            for industry, companies in industry_data.items():
-                for co in companies:
-                    self.company_to_industry[co['name']] = industry
-            logger.info(f"100대 기업 데이터 로드 완료 ({len(self.company_to_industry)}개 기업)")
+                companies = json.load(f)
+            for co in companies:
+                self.company_to_industry[co['name']] = co['industry']
+            logger.info(f"기업 데이터 로드 완료 ({len(self.company_to_industry)}개 기업)")
         except Exception as e:
             logger.error(f"기업 데이터 로드 오류: {e}")
 
@@ -109,7 +104,7 @@ class LinkareerScraper:
         year = self.parse_year_from_period(period_text)
         if year is None:
             return True
-        return year > CUTOFF_YEAR
+        return year >= CUTOFF_YEAR
 
     def split_question_and_answer(self, content_text):
         """본문 텍스트 블록에서 질문과 답변을 정밀 분리"""
@@ -212,15 +207,35 @@ class LinkareerScraper:
 
         # 2. 자바스크립트를 이용한 원본 텍스트 노드 추출
         script = """
-        var container = document.querySelector('article') || document.body;
-        var nodes = container.querySelectorAll('p, div[class*="Content"], div[class*="coverLetter"], div[class*="Line"]');
         var results = [];
-        for (var i = 0; i < nodes.length; i++) {
-            var text = nodes[i].textContent || nodes[i].innerText;
-            if (text && text.trim().length > 0) {
-                results.push(text.trim());
+        var container = document.querySelector('article') || document.querySelector('main') || document.querySelector('[role="main"]') || document.body;
+
+        // 1차: p, li, h1-h4, td 등 시맨틱 태그에서 텍스트 추출
+        var seen = new Set();
+        var semanticEls = container.querySelectorAll('p, li, h1, h2, h3, h4, td, pre, blockquote');
+        for (var i = 0; i < semanticEls.length; i++) {
+            var text = (semanticEls[i].innerText || semanticEls[i].textContent || '').trim();
+            if (text.length > 5 && !seen.has(text)) {
+                seen.add(text);
+                results.push(text);
             }
         }
+
+        // 2차: 결과가 부족하면 innerText 전체를 개행 기준으로 분리
+        if (results.length < 3) {
+            var allText = (container.innerText || container.textContent || '').trim();
+            var lines = allText.split(/\\n+/);
+            results = [];
+            seen = new Set();
+            for (var j = 0; j < lines.length; j++) {
+                var line = lines[j].trim();
+                if (line.length > 5 && !seen.has(line)) {
+                    seen.add(line);
+                    results.push(line);
+                }
+            }
+        }
+
         return results;
         """
         
@@ -346,7 +361,7 @@ class LinkareerScraper:
 
 
 def save_to_excel(results, save_directory=None):
-    """수집 완료 데이터를 판다스 데이터프레임 구조화 후 엑셀로 누적 저장"""
+    """수집 완료 데이터를 CSV/JSON으로 누적 저장"""
     if save_directory is None:
         base_dir = os.path.dirname(os.path.abspath(__file__))
         save_directory = os.path.join(base_dir, 'data')
@@ -359,48 +374,74 @@ def save_to_excel(results, save_directory=None):
 
     rows = []
     for result in results:
-        essay_id = result['essay_id']
-        for i, qa in enumerate(result['qa'], start=1):
+        for qa in result['qa']:
             rows.append({
                 '회사명': result['company'],
-                '산업분야': result['industry'],
-                '직무': result['job'],
-                '기간': result['period'],
-                '질문번호': f'Q{i}',
-                '질문': qa['question'],
+                '연도': result['period'],
+                '직무분야': result['industry'],
+                '직무명': result['job'],
+                '질문 내용': qa['question'],
                 '답변': qa['answer'],
-                'URL': result['url'],
-                'Essay_ID': f"LK_{essay_id}"
             })
 
     df_new = pd.DataFrame(rows)
-    excel_path = os.path.join(save_directory, '링커리어_합격자소서.xlsx')
+    csv_path = os.path.join(save_directory, 'linked_scraping_result.csv')
 
-    if os.path.exists(excel_path):
+    COLS = ['회사명', '연도', '직무분야', '직무명', '질문 내용', '답변']
+
+    if os.path.exists(csv_path):
         try:
-            existing_df = pd.read_excel(excel_path)
-            combined_df = pd.concat([existing_df, df_new], ignore_index=True)
-            combined_df = combined_df.drop_duplicates(subset=['Essay_ID', '질문번호'], keep='first')
+            existing_df = pd.read_csv(csv_path, encoding='utf-8-sig')
+            if set(COLS).issubset(set(existing_df.columns)):
+                existing_df = existing_df[COLS]
+                combined_df = pd.concat([existing_df, df_new[COLS]], ignore_index=True)
+            else:
+                logger.warning("기존 CSV 컬럼 불일치 (구 버전). 새로 생성합니다.")
+                combined_df = df_new[COLS]
         except Exception as e:
-            logger.error(f"기존 엑셀 로드 실패, 새로 생성합니다: {e}")
-            combined_df = df_new
+            logger.error(f"기존 CSV 로드 실패, 새로 생성합니다: {e}")
+            combined_df = df_new[COLS]
     else:
-        combined_df = df_new
+        combined_df = df_new[COLS]
 
-    combined_df.to_excel(excel_path, index=False)
-    logger.info(f"엑셀 저장 완료: {excel_path} (총 {len(combined_df)}행)")
+    # CSV 저장 (NaN → 빈 문자열로 정규화)
+    combined_df = combined_df.fillna('')
+    combined_df[COLS].to_csv(csv_path, index=False, encoding='utf-8-sig')
+    logger.info(f"CSV 저장 완료: {csv_path} (총 {len(combined_df)}행)")
+
+    # JSON 저장 (회사+연도+직무명 단위로 그룹화)
+    json_path = os.path.join(save_directory, 'linked_scraping_result.json')
+    json_records = []
+    for (company, year, job), group in combined_df.groupby(['회사명', '연도', '직무명'], sort=False):
+        qa_list = [
+            {'질문 내용': row['질문 내용'], '답변': row['답변']}
+            for _, row in group.iterrows()
+        ]
+        json_records.append({
+            '회사명': company,
+            '연도': year,
+            '직무분야': group.iloc[0]['직무분야'],
+            '직무명': job,
+            'qa': qa_list
+        })
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(json_records, f, ensure_ascii=False, indent=2)
+    logger.info(f"JSON 저장 완료: {json_path} ({len(json_records)}개 그룹)")
 
 
 if __name__ == "__main__":
     print("=== 링커리어 합격자소서 스크래핑 프로그램 (최종 수정본) ===")
     print(f"※ 최근 3년 이내 ({CUTOFF_YEAR}년 이후) + Top 100 대기업 자소서 실시간 정밀 동기화 수집")
 
-    try:
-        start = int(input("시작 페이지 (기본값 1): ") or "1")
-        end = int(input("종료 페이지 (기본값 10): ") or "10")
+    parser = argparse.ArgumentParser(description="링커리어 합격자소서 스크래핑")
+    parser.add_argument("--start", type=int, default=1, help="시작 페이지 (기본값 1)")
+    parser.add_argument("--end", type=int, default=10, help="종료 페이지 (기본값 10)")
+    parser.add_argument("--headless", action="store_true", default=False, help="헤드리스 모드")
+    args = parser.parse_args()
 
-        scraper = LinkareerScraper(headless=False)
-        results = scraper.scrape(start_page=start, end_page=end)
+    try:
+        scraper = LinkareerScraper(headless=args.headless)
+        results = scraper.scrape(start_page=args.start, end_page=args.end)
         save_to_excel(results)
         print(f"\n작업 완료! 총 {len(results)}개 대기업 자소서 세트 최종 저장 완료")
     except Exception as e:

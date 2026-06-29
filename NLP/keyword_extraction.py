@@ -13,9 +13,7 @@ import json
 class KeywordExtractor:
     def __init__(self, file_path=None):
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        if file_path is None:
-            file_path = os.path.join(base_dir, 'data', '잡코리아_합격자소서.xlsx')
-        self.file_path = file_path
+        self.file_path = file_path  # 하위 호환용, load_data()에서는 사용 안 함
         self.kiwi = Kiwi()
 
         # NLTK 데이터 다운로드 (처음 실행시에만 필요)
@@ -90,68 +88,51 @@ class KeywordExtractor:
     def load_data(self):
         """데이터 로드 및 회사명/직무명 예외 처리 사전 생성"""
         try:
-            if os.path.exists(self.file_path):
-                if self.file_path.endswith('.xlsx'):
-                    df = pd.read_excel(self.file_path, engine='openpyxl')
-                else:
-                    try:
-                        df = pd.read_csv(self.file_path, delimiter='\t', encoding='cp949')
-                    except:
-                        df = pd.read_csv(self.file_path, delimiter='\t', encoding='euc-kr')
-            else:
-                df = pd.DataFrame()
-                print(f"기존 파일 없음: {self.file_path}")
-            
-            # 링커리어 데이터 파일 존재 시 병합
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            linkareer_path = os.path.join(base_dir, 'data', '링커리어_합격자소서.xlsx')
-            if os.path.exists(linkareer_path):
-                try:
-                    df_linkareer = pd.read_excel(linkareer_path, engine='openpyxl')
-                    # 빈 데이터프레임과 concat 시 오류 방지
-                    if not df.empty:
-                        df = pd.concat([df, df_linkareer], ignore_index=True)
-                    else:
-                        df = df_linkareer
-                    print(f"링커리어 합격자소서 데이터 로드 완료: {len(df_linkareer)}개 행 병합됨")
-                except Exception as e:
-                    print(f"링커리어 데이터 로드/병합 오류: {e}")
-            
+            jk_path = os.path.join(base_dir, 'data', 'jobkorea_scraping_result.csv')
+            lk_path = os.path.join(base_dir, 'data', 'linked_scraping_result.csv')
+
+            frames = []
+            for path in [jk_path, lk_path]:
+                if os.path.exists(path):
+                    try:
+                        frames.append(pd.read_csv(path, encoding='utf-8-sig'))
+                        print(f"데이터 로드: {os.path.basename(path)}")
+                    except Exception as e:
+                        print(f"데이터 로드 오류 ({os.path.basename(path)}): {e}")
+
+            df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
             self.df = df.fillna('')
             print(f"합격자소서 통합 데이터 로드 완료: 최종 {len(self.df)}개 행")
         except Exception as e:
             print(f"데이터 로드 오류: {e}")
             self.df = pd.DataFrame()
 
-        # 회사명, 직무명, 부서명 추출하여 예외 처리 단어로 등록
         if not self.df.empty:
             self.company_exceptions = {
                 '회사명': self.df['회사명'].unique().tolist() if '회사명' in self.df.columns else [],
-                '직무명': self.df['직무'].unique().tolist() if '직무' in self.df.columns else [],
-                '부서명': self.df['부서'].unique().tolist() if '부서' in self.df.columns else []
+                '직무명': self.df['직무명'].unique().tolist() if '직무명' in self.df.columns else [],
+                '부서명': []
             }
         else:
             self.company_exceptions = {'회사명': [], '직무명': [], '부서명': []}
 
     def load_company_talent_data(self, base_dir):
-        """100대 기업 인재상 JSON 데이터 로드"""
-        json_path = os.path.join(base_dir, 'data', 'top_100_companies.json')
+        """기업 인재상 JSON 데이터 로드"""
+        json_path = os.path.join(base_dir, 'data', 'companies.json')
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
-                self.company_talent_data = json.load(f)
-            
-            # 기업 리스트 및 고유 인재상 키워드 사전화
-            self.company_list = []
+                companies = json.load(f)
+
+            self.company_list = companies
+            self.company_talent_data = {co['name']: co for co in companies}
             self.all_talent_keywords = set()
-            for industry, companies in self.company_talent_data.items():
-                for co in companies:
-                    co['industry'] = industry
-                    self.company_list.append(co)
-                    self.all_talent_keywords.update(co['core_values'])
-            
-            print(f"100대 기업 인재상 데이터 로드 완료 ({len(self.company_list)}개 기업, {len(self.all_talent_keywords)}개 고유 인재상 키워드)")
+            for co in companies:
+                self.all_talent_keywords.update(co['core_values'])
+
+            print(f"기업 인재상 데이터 로드 완료 ({len(self.company_list)}개 기업, {len(self.all_talent_keywords)}개 고유 인재상 키워드)")
         except Exception as e:
-            print(f"100대 기업 데이터 로드 오류: {e}")
+            print(f"기업 데이터 로드 오류: {e}")
             self.company_talent_data = {}
             self.company_list = []
             self.all_talent_keywords = set()
@@ -340,31 +321,27 @@ class KeywordExtractor:
         return [word for word, count in counter.most_common(top_n)]
 
     def analyze_by_job_and_talent(self):
-        """직무별 그룹화, 상위 15개 실무 키워드 및 대기업 100군데 연계 인재상 키워드 10개 추출"""
+        """직무명별 그룹화, 실무 키워드 및 인재상 키워드 추출 (보조 분석용)"""
         if self.df.empty:
             print("데이터프레임이 비어 있어 직무 분석을 수행할 수 없습니다.")
             return None
-        
-        print("\n=== [직무별 실무 & 대기업 인재상 키워드 분석 시작] ===")
-        job_groups = self.df.groupby('직무')
-        
+
+        print("\n=== [직무명별 실무 & 인재상 키워드 분석 시작] ===")
+        job_groups = self.df.groupby('직무명')
+
         job_analysis_results = []
-        
+
         for job_name, job_group in job_groups:
             if not job_name or job_name.strip() == '':
                 continue
-            
+
             print(f"분석 중: {job_name} ({len(job_group)}개 문항)")
-            
-            # 1. 해당 직무 자소서 답변 데이터 합치기
+
             all_answers = job_group['답변'].tolist()
-            
-            # 2. 15개 실무 역량 키워드 추출 (TF 기준 상위 15개)
+
             job_keywords = self.extract_keywords_multilingual(all_answers, top_n=30)
-            # 인재상 키워드와 겹치지 않는 실무 중심 키워드로 정제
             practical_keywords = [w for w in job_keywords if w not in self.all_talent_keywords][:15]
-            
-            # 자소서 텍스트 전체 토큰화하여 대기업 인재상 매칭용 카운터 빌드
+
             all_tokens = []
             for ans in all_answers:
                 if ans:
@@ -374,33 +351,22 @@ class KeywordExtractor:
                         all_tokens.extend([t.form for t in tokens if t.tag.startswith('N') and len(t.form) >= 2])
                     except:
                         all_tokens.extend(self.extract_words(cleaned_ans))
-            
+
             token_counts = Counter(all_tokens)
-            
-            # 3. 100대 기업 인재상 키워드 Pool 기반 매칭 빈도 분석
-            talent_freq = {}
-            for kw in self.all_talent_keywords:
-                # 자소서 내 출현 빈도수 기록
-                talent_freq[kw] = token_counts.get(kw, 0)
-                
-            # 빈도 상위 10개 대기업 인재상 키워드 선정
+
+            talent_freq = {kw: token_counts.get(kw, 0) for kw in self.all_talent_keywords}
             sorted_talents = sorted(talent_freq.items(), key=lambda x: x[1], reverse=True)
-            top_talent_keywords = [kw for kw, freq in sorted_talents[:10]]
-            
-            # 4. 기업별 인재상 부합도 매칭 점수 계산 (Top 3 대기업 선정)
-            company_scores = []
-            for company in self.company_list:
-                # 회사의 10개 인재상 키워드가 직무 자소서 토큰 빈도에서 차지하는 가중치 합산
-                score = sum(token_counts.get(val, 0) for val in company['core_values'])
-                company_scores.append((company['name'], score, company['industry']))
-                
-            # 상위 3개 어울리는 기업 선정
+            top_talent_keywords = [kw for kw, _ in sorted_talents[:10]]
+
+            company_scores = [
+                (co['name'], sum(token_counts.get(v, 0) for v in co['core_values']), co['industry'])
+                for co in self.company_list
+            ]
             company_scores.sort(key=lambda x: x[1], reverse=True)
-            top_companies = [f"{name}({industry})" for name, score, industry in company_scores[:3]]
-            
-            # 5. 통합 키워드 프로필 작성 (25개)
+            top_companies = [f"{name}({ind})" for name, _, ind in company_scores[:3]]
+
             combined_keywords = practical_keywords + top_talent_keywords
-            
+
             job_analysis_results.append({
                 '직무': job_name,
                 '자소서_개수': len(job_group),
@@ -409,118 +375,89 @@ class KeywordExtractor:
                 '추천_대기업_Top3': ', '.join(top_companies),
                 '통합_키워드_25': ', '.join(combined_keywords)
             })
-            
-        # 결과를 DataFrame으로 변환 및 파일 저장
+
         result_df = pd.DataFrame(job_analysis_results)
-        
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        output_csv = os.path.join(base_dir, 'data', 'job_keywords_analysis.csv')
-        output_json = os.path.join(base_dir, 'data', 'job_keywords_analysis.json')
-        
-        # 기존 결과물 병합 로직 추가
-        if os.path.exists(output_csv):
-            try:
-                existing_df = pd.read_csv(output_csv)
-                # 새로운 결과에 없는 직무는 유지, 있는 직무는 덮어쓰기 (또는 합치기)
-                # 일단 간단하게 새로운 직무 데이터로 업데이트하고 나머지는 유지
-                existing_df = existing_df[~existing_df['직무'].isin(result_df['직무'])]
-                result_df = pd.concat([existing_df, result_df], ignore_index=True)
-                print(f"기존 분석 결과와 병합 완료 (총 {len(result_df)}개 직무)")
-            except Exception as e:
-                print(f"기존 결과 병합 오류: {e}")
-        
+        output_csv = os.path.join(base_dir, 'data', 'job_keywords_by_position.csv')
+        output_json = os.path.join(base_dir, 'data', 'job_keywords_by_position.json')
+
         result_df.to_csv(output_csv, index=False, encoding='utf-8-sig')
-        
-        # JSON 형식으로도 저장 (구조화된 가독성을 위해)
-        result_dict = result_df.set_index('직무').to_dict(orient='index')
         with open(output_json, 'w', encoding='utf-8') as f:
-            json.dump(result_dict, f, ensure_ascii=False, indent=2)
-            
-        print(f"=== [분석 완료] ===")
-        print(f"1. 실무별 키워드 리포트(CSV): {output_csv}")
-        print(f"2. 실무별 키워드 리포트(JSON): {output_json}")
-        
+            json.dump(result_df.to_dict(orient='records'), f, ensure_ascii=False, indent=2)
+
+        print(f"직무명별 분석 저장: {output_csv}")
         return result_df
 
     def analyze_jobkorea_data(self):
-        """
-        [기존 API 호환용] 산업분야-직무-직위별 핵심 질문 그룹 분석
-        이후 신규 직무별 실무&인재상 키워드 분석을 백그라운드로 호출하여 모두 최신화합니다.
+        """직무분야별 그룹으로 job_keywords_analysis.csv/json 생성
+
+        컬럼: 직무분야 | 자기소개 개수 | 질문 목적 | 답변키워드_20 | 추출회사명
         """
         if self.df.empty:
             print("데이터가 비어 있습니다.")
             return None
-            
-        separate_results = []
-        
-        # 산업분야가 없으면 '기타'로 채움
-        if '산업분야' not in self.df.columns:
-            self.df['산업분야'] = '기타'
 
-        industry_groups = self.df.groupby('산업분야')
-        print(f"\n총 {len(industry_groups)}개 산업분야 발견 (기존 포맷 분석)")
-        
+        if '직무분야' not in self.df.columns:
+            self.df['직무분야'] = '기타'
+
+        industry_groups = self.df.groupby('직무분야')
+        print(f"\n총 {len(industry_groups)}개 직무분야 발견")
+
+        results = []
         for industry_name, industry_group in industry_groups:
-            job_groups = industry_group.groupby('직무')
-            
-            for job_name, job_group in job_groups:
-                position_groups = job_group.groupby('직위')
-                
-                for position_name, position_group in position_groups:
-                    # 질문 카테고리별 답변 집계
-                    question_answer_map = Counter()
-                    unique_categories = set(self.category_map.values())
-                    question_answers_pool = {cat: [] for cat in unique_categories}
-                    
-                    for _, row in position_group.iterrows():
-                        question_content = self.clean_text(row['질문'])
-                        answer_content = self.clean_text(row['답변'])
-                        
-                        matched_keyword = None
-                        for keyword in self.common_question_keywords:
-                            if keyword in question_content:
-                                matched_keyword = keyword
-                                break
-                        
-                        if matched_keyword and matched_keyword in self.category_map:
-                            mapped_cat = self.category_map[matched_keyword]
-                            question_answer_map[mapped_cat] += 1
-                            question_answers_pool[mapped_cat].append(answer_content)
+            # 자기소개 개수: 고유 (회사명, 연도, 직무명) 조합 수
+            essay_count = industry_group.drop_duplicates(
+                subset=['회사명', '연도', '직무명']
+            ).shape[0]
 
-                    if not question_answer_map:
-                        continue
+            # 질문 목적: 가장 빈번한 질문 카테고리
+            category_counter = Counter()
+            all_answers_for_keywords = []
+            for _, row in industry_group.iterrows():
+                question_content = self.clean_text(row['질문 내용'])
+                answer_content = self.clean_text(row['답변'])
+                if answer_content:
+                    all_answers_for_keywords.append(answer_content)
 
-                    # 가장 많이 나오는 카테고리 선택
-                    top_10_questions = question_answer_map.most_common(10)
-                    
-                    for rank, (question_keyword, count) in enumerate(top_10_questions, 1):
-                        all_matched_answers = question_answers_pool[question_keyword]
-                        if len(all_matched_answers) > 100:
-                            all_matched_answers = random.sample(all_matched_answers, 100)
+                for keyword in self.common_question_keywords:
+                    if keyword in question_content and keyword in self.category_map:
+                        category_counter[self.category_map[keyword]] += 1
+                        break
 
-                        extracted_keywords = self.extract_keywords_multilingual(all_matched_answers, top_n=20)
-                        keywords_text = ', '.join(extracted_keywords) if extracted_keywords else ''
-                        
-                        separate_results.append({
-                            '산업분야': industry_name,
-                            '직무': job_name,
-                            '직위': position_name,
-                            '질문순위': rank,
-                            '핵심단어': question_keyword,
-                            '질문빈도': count,
-                            '답변키워드_TOP20': keywords_text
-                        })
-        
-        # 결과를 DataFrame으로 변환 및 저장
-        result_df = pd.DataFrame(separate_results)
+            top_purpose = category_counter.most_common(1)[0][0] if category_counter else '기타'
+
+            # 답변키워드_20: 해당 직무분야 전체 답변에서 top 20 키워드
+            if len(all_answers_for_keywords) > 200:
+                all_answers_for_keywords = random.sample(all_answers_for_keywords, 200)
+            keywords = self.extract_keywords_multilingual(all_answers_for_keywords, top_n=20)
+
+            # 추출회사명: 수집된 유니크 회사명
+            unique_companies = [c for c in industry_group['회사명'].dropna().unique() if c]
+
+            results.append({
+                '직무분야': industry_name,
+                '자기소개 개수': essay_count,
+                '질문 목적': top_purpose,
+                '답변키워드_20': ', '.join(keywords),
+                '추출회사명': ', '.join(unique_companies),
+            })
+
+        result_df = pd.DataFrame(results)
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        output_file = os.path.join(base_dir, 'jobkorea_keyword_analysis.csv')
-        result_df.to_csv(output_file, index=False, encoding='utf-8-sig')
-        print(f"기존 규격 파일 저장 완료: {output_file}")
-        
-        # 신규 기능(직무별 실무&대기업 인재상 키워드 추출) 실행
+        output_csv = os.path.join(base_dir, 'data', 'job_keywords_analysis.csv')
+        output_json = os.path.join(base_dir, 'data', 'job_keywords_analysis.json')
+
+        result_df.to_csv(output_csv, index=False, encoding='utf-8-sig')
+        with open(output_json, 'w', encoding='utf-8') as f:
+            json.dump(result_df.to_dict(orient='records'), f, ensure_ascii=False, indent=2)
+
+        print(f"=== [분석 완료] ===")
+        print(f"직무분야별 키워드 분석 CSV: {output_csv}")
+        print(f"직무분야별 키워드 분석 JSON: {output_json}")
+
+        # 보조 분석: 직무명별 상세 키워드
         self.analyze_by_job_and_talent()
-        
+
         return result_df
 
 if __name__ == "__main__":
