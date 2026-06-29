@@ -1,4 +1,4 @@
-﻿# NLP 디렉토리 기준으로 실행
+# NLP 디렉토리 기준으로 실행
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
 
@@ -11,4 +11,5 @@ if (Test-Path $venvActivate) {
 }
 
 # 파이프라인 실행 (전달된 모든 인자 그대로 통과)
+# 예시: .\run.ps1 --max-pages 5 --no-headless
 python pipeline.py @args

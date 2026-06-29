@@ -89,21 +89,14 @@ class KeywordExtractor:
         """데이터 로드 및 회사명/직무명 예외 처리 사전 생성"""
         try:
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            jk_path = os.path.join(base_dir, 'data', 'jobkorea_scraping_result.csv')
             lk_path = os.path.join(base_dir, 'data', 'linked_scraping_result.csv')
 
-            frames = []
-            for path in [jk_path, lk_path]:
-                if os.path.exists(path):
-                    try:
-                        frames.append(pd.read_csv(path, encoding='utf-8-sig'))
-                        print(f"데이터 로드: {os.path.basename(path)}")
-                    except Exception as e:
-                        print(f"데이터 로드 오류 ({os.path.basename(path)}): {e}")
-
-            df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-            self.df = df.fillna('')
-            print(f"합격자소서 통합 데이터 로드 완료: 최종 {len(self.df)}개 행")
+            if os.path.exists(lk_path):
+                self.df = pd.read_csv(lk_path, encoding='utf-8-sig').fillna('')
+                print(f"데이터 로드 완료: {len(self.df)}개 행 (linked_scraping_result.csv)")
+            else:
+                print("linked_scraping_result.csv 파일이 없습니다.")
+                self.df = pd.DataFrame()
         except Exception as e:
             print(f"데이터 로드 오류: {e}")
             self.df = pd.DataFrame()
@@ -388,7 +381,7 @@ class KeywordExtractor:
         print(f"직무명별 분석 저장: {output_csv}")
         return result_df
 
-    def analyze_jobkorea_data(self):
+    def analyze_data(self):
         """직무분야별 그룹으로 job_keywords_analysis.csv/json 생성
 
         컬럼: 직무분야 | 자기소개 개수 | 질문 목적 | 답변키워드_20 | 추출회사명
@@ -462,4 +455,4 @@ class KeywordExtractor:
 
 if __name__ == "__main__":
     extractor = KeywordExtractor()
-    extractor.analyze_jobkorea_data()
+    extractor.analyze_data()

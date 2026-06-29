@@ -90,6 +90,30 @@ class LinkareerScraper:
                 return industry
         return None
 
+    @staticmethod
+    def classify_industry_by_job(job_name, company_industry):
+        """직무명 키워드를 우선 검사해 기능직 카테고리를 반환, 해당 없으면 회사 업종 유지"""
+        if not job_name:
+            return company_industry
+        j = str(job_name)
+
+        if re.search(r'영업|마케팅|광고|홍보|브랜드|세일즈|sales', j, re.I):
+            return '영업·마케팅'
+        if re.search(r'인사|채용|노무|HRM|HRD|조직문화|교육운영', j, re.I) or re.fullmatch(r'\s*HR\s*', j, re.I):
+            return '인사·교육'
+        if re.search(r'회계|재무|세무|경리|결산|CFO|자금관리|IR\b|TAX', j, re.I):
+            return '회계·재무'
+        if re.search(r'법무|준법감시|컴플라이언스|지식재산|특허(?!기사)', j, re.I):
+            return '법무'
+        if re.search(r'경영지원|경영기획', j, re.I):
+            return '경영기획'
+        if re.search(r'(?<!\w)물류|SCM|포워딩|통관|수출입', j, re.I):
+            if company_industry == '항공·물류':
+                return company_industry
+            return '구매·물류'
+
+        return company_industry
+
     def parse_year_from_period(self, period_text):
         """기간 텍스트에서 연도 추출 (예: '2025 상반기' -> 2025)"""
         if not period_text:
@@ -130,9 +154,9 @@ class LinkareerScraper:
             return None, None
 
         question_patterns = [
-            re.compile(r'^\d+[\.\)\s]\s*.+'),
+            re.compile(r'^\d+[\.)](?!\d)\s*.+'),   # "1. " or "1)" but not "0.8" decimals
             re.compile(r'^Q\d+[\.\)\s:\-]\s*.+'),
-            re.compile(r'^\[.+?\]\s*.+'),
+            re.compile(r'^\[(?!\d{4}[\.\-~\s]).+?\]\s*.+'),  # [YYYY.MM] 날짜 형태 제외
             re.compile(r'^자유\s*양식', re.I),
             re.compile(r'^공고\s*내\s*.+'),
         ]
@@ -179,7 +203,8 @@ class LinkareerScraper:
     def parse_essay_page(self, page_url):
         """링커리어 자소서 상세 페이지 파싱 (오작동 조기종료 버그 완전 해결 판)"""
         logger.info(f"페이지 접속: {page_url}")
-        self.driver.get(page_url)
+        detail_url = page_url.split('?')[0] + "?page=1&sort=PASSED_AT&tab=all"
+        self.driver.get(detail_url)
         
         # 1. 제목 정보 추출
         try:
@@ -193,10 +218,11 @@ class LinkareerScraper:
         logger.info(f"  [메인 타겟] {main_company} / {main_job} / {main_period}")
 
         # 기업 및 기간 조건 필터
-        main_industry = self.get_industry_by_company(main_company)
-        if not main_industry:
+        company_industry = self.get_industry_by_company(main_company)
+        if not company_industry:
             logger.info(f"  -> Top 100 기업 아님 (수집 스킵): {main_company}")
             return []
+        main_industry = self.classify_industry_by_job(main_job, company_industry)
 
         if not self.is_within_3_years(main_period):
             logger.info(f"  -> 3년 범위 초과 (수집 스킵): {main_period}")
@@ -250,34 +276,62 @@ class LinkareerScraper:
             return []
 
         current_qa_blocks = []
-        
-        # 스크랩 광고성 텍스트 매칭 규칙
-        ads_pattern = re.compile(r'마음에 드는 문장을 스크랩|채용공고&합격자료|앱을 설치하고|원활한 이용', re.IGNORECASE)
+
+        # 광고·UI 텍스트 필터
+        ads_pattern = re.compile(
+            r'마음에 드는 문장을 스크랩|채용공고&합격자료|앱을 설치하고|원활한 이용|^문장 스크랩$'
+            r'|한눈에 확인해보세요|만능검색기|👉',
+            re.IGNORECASE
+        )
         seen_texts = set()
+
+        pending_question = None
+        pending_answer_parts = []
 
         for text in raw_texts:
             if text in seen_texts:
                 continue
             seen_texts.add(text)
 
-            # [핵심 수정] 본문을 통째로 끊어버리던 break를 제거하고, 순수 안내문구 레이어만 건너뛰도록(continue) 변경
             if ads_pattern.search(text):
                 continue
 
-            # 추천 자소서 더보기 박스 텍스트 영역 스킵
             if "보고있는 합격자소서 참고해서" in text or "더 많은 최신 합격 자소서" in text:
                 continue
 
+            # 링커리어 AI 자동 요약 블록 스킵
+            if text.startswith("이 글은 "):
+                continue
+
             question, answer = self.split_question_and_answer(text)
-            
-            if question and answer:
-                current_qa_blocks.append({'question': question, 'answer': answer})
-            elif answer and not question:
-                if current_qa_blocks:
+
+            if question:
+                # 직전 질문의 Q&A 저장
+                if pending_question and pending_answer_parts:
+                    current_qa_blocks.append({
+                        'question': pending_question,
+                        'answer': '\n\n'.join(pending_answer_parts).strip()
+                    })
+                pending_question = question
+                pending_answer_parts = []
+                if answer:
+                    pending_answer_parts.append(answer)
+            elif answer:
+                if pending_question is not None:
+                    # 현재 질문의 답변 누적
+                    pending_answer_parts.append(answer)
+                elif current_qa_blocks:
                     if answer not in current_qa_blocks[-1]['answer']:
                         current_qa_blocks[-1]['answer'] += '\n\n' + answer
                 else:
                     current_qa_blocks.append({'question': '자유양식', 'answer': answer})
+
+        # 마지막 Q&A 플러시
+        if pending_question and pending_answer_parts:
+            current_qa_blocks.append({
+                'question': pending_question,
+                'answer': '\n\n'.join(pending_answer_parts).strip()
+            })
 
         # 3. 데이터 조립 및 결과 반환
         if not current_qa_blocks:
@@ -306,41 +360,117 @@ class LinkareerScraper:
         logger.info(f"  -> [파싱 성공] {main_company} / {main_job} ({len(clean_qa_list)}개 문항 확보)")
         return results
 
-    def get_essay_links_from_search_page(self, page_num):
-        """검색 결과 목록 페이지에서 상세 자소서 URL 추출"""
-        url = f"https://linkareer.com/cover-letter/search?page={page_num}"
-        logger.info(f"검색 페이지 {page_num} 접속: {url}")
-        self.driver.get(url)
-        time.sleep(3)
+    def get_essay_links_by_company(self, company_name, max_pages=50):
+        """회사명(organizationName)으로 검색하여 자소서 링크 수집.
+        페이지에 CUTOFF_YEAR 이전 자소서가 등장하면 조기 종료.
+        반환: (all_links, first_page_links)"""
+        from urllib.parse import quote
+        period_re = re.compile(r'(\d{4})\s*[상하]반기')
+        all_links = []
+        first_page_links = []
 
-        links = []
-        try:
-            elements = self.driver.find_elements(By.CSS_SELECTOR, "a[href^='/cover-letter/']")
-            for elem in elements:
-                href = elem.get_attribute("href")
-                if href and '/search' not in href:
-                    clean = href.split('?')[0]
-                    if clean not in links:
-                        links.append(clean)
-            logger.info(f"  -> {len(links)}개 자소서 링크 수집")
-        except Exception as e:
-            logger.error(f"링크 수집 오류: {e}")
+        for page in range(1, max_pages + 1):
+            url = (
+                f"https://linkareer.com/cover-letter/search"
+                f"?tab=major_company&sort=PASSED_AT"
+                f"&organizationName={quote(company_name)}&page={page}"
+            )
+            logger.info(f"  [{company_name}] 검색 페이지 {page} 접속")
+            self.driver.get(url)
+            time.sleep(3)
 
-        return links
+            page_links = []
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, "a[href^='/cover-letter/']")
+                for elem in elements:
+                    href = elem.get_attribute("href")
+                    if href and '/search' not in href:
+                        clean = href.split('?')[0]
+                        if clean not in all_links and clean not in page_links:
+                            page_links.append(clean)
+            except Exception as e:
+                logger.error(f"링크 수집 오류: {e}")
 
-    def scrape(self, start_page=1, end_page=10):
-        """메인 제어 루프"""
-        # 프로그램 시작 시 1회 수동 로그인 수행
+            if not page_links:
+                logger.info(f"  [{company_name}] 페이지 {page} 결과 없음 → 검색 종료")
+                break
+
+            if page == 1:
+                first_page_links = page_links[:]
+
+            all_links.extend(page_links)
+            logger.info(f"  [{company_name}] 페이지 {page}: {len(page_links)}개 링크")
+
+            # 페이지 내 연도 확인 — 가장 오래된 자소서가 CUTOFF_YEAR 이전이면 조기 종료
+            try:
+                page_text = self.driver.find_element(By.TAG_NAME, "body").text
+                years = [int(y) for y in period_re.findall(page_text)]
+                if years and min(years) < CUTOFF_YEAR:
+                    logger.info(
+                        f"  [{company_name}] 페이지 {page}에 {min(years)}년 자소서 발견 "
+                        f"(기준: {CUTOFF_YEAR}년) → 이후 페이지 생략"
+                    )
+                    break
+            except Exception:
+                pass
+
+        return all_links, first_page_links
+
+    def _log_data_preview(self, results):
+        """첫 페이지 파싱 결과를 linked_scraping_result 형태로 로그 출력"""
+        logger.info("=" * 60)
+        logger.info("[데이터 미리보기] linked_scraping_result 저장 예정 데이터")
+        logger.info("=" * 60)
+        for r in results:
+            logger.info(f"  회사명   : {r['company']}")
+            logger.info(f"  연도     : {r['period']}")
+            logger.info(f"  직무분야 : {r['industry']}")
+            logger.info(f"  직무명   : {r['job']}")
+            for i, qa in enumerate(r['qa'], 1):
+                q_preview = qa['question'][:80] + ('...' if len(qa['question']) > 80 else '')
+                a_preview = qa['answer'][:120].replace('\n', ' ') + ('...' if len(qa['answer']) > 120 else '')
+                logger.info(f"  Q{i}: {q_preview}")
+                logger.info(f"  A{i}: {a_preview}")
+            logger.info("-" * 60)
+
+    def scrape(self, max_pages_per_company=50):
+        """companies.json 기업별 검색 방식 메인 제어 루프"""
         self.wait_for_login()
-        
+
         all_results = []
+        no_essay_companies = []
+        seen_urls = set()  # 전체 실행에서 이미 처리한 URL 추적 (중복 파싱 방지)
+        companies = list(self.company_to_industry.items())
+        logger.info(f"총 {len(companies)}개 기업 검색 시작")
+
         try:
-            for page in range(start_page, end_page + 1):
-                links = self.get_essay_links_from_search_page(page)
-                for link in links:
+            for idx, (company_name, industry) in enumerate(companies, 1):
+                logger.info(f"\n[{idx}/{len(companies)}] {company_name} ({industry}) 검색 중...")
+                links, first_page_links = self.get_essay_links_by_company(
+                    company_name, max_pages=max_pages_per_company
+                )
+                first_page_set = set(first_page_links)
+
+                # 이미 처리한 URL 제외
+                new_links = [l for l in links if l not in seen_urls]
+                seen_urls.update(new_links)
+
+                if not new_links:
+                    logger.info(f"  -> 합격자소서가 없음 (또는 이미 모두 수집됨): {company_name}")
+                    no_essay_companies.append(company_name)
+                    continue
+
+                logger.info(f"  -> 신규 {len(new_links)}개 URL 파싱 시작 (전체 {len(links)}개 중 {len(links)-len(new_links)}개 중복 스킵)")
+                first_page_previewed = False
+                for link in new_links:
                     try:
                         results = self.parse_essay_page(link)
                         all_results.extend(results)
+
+                        # 첫 페이지 링크 파싱 결과만 미리보기 출력
+                        if results and link in first_page_set and not first_page_previewed:
+                            self._log_data_preview(results)
+                            first_page_previewed = True
                     except Exception as e:
                         logger.error(f"파싱 오류 ({link}): {e}")
                         try:
@@ -356,6 +486,8 @@ class LinkareerScraper:
             except:
                 pass
 
+        if no_essay_companies:
+            logger.info(f"\n합격자소서 없는 기업 ({len(no_essay_companies)}개): {', '.join(no_essay_companies)}")
         logger.info(f"총 {len(all_results)}개 자소서 세트 수집 완료")
         return all_results
 
@@ -404,6 +536,13 @@ def save_to_excel(results, save_directory=None):
     else:
         combined_df = df_new[COLS]
 
+    # 중복 제거
+    before = len(combined_df)
+    combined_df = combined_df.drop_duplicates(subset=['회사명', '연도', '직무명', '질문 내용'], keep='first')
+    removed = before - len(combined_df)
+    if removed:
+        logger.info(f"중복 {removed}행 제거 → 최종 {len(combined_df)}행")
+
     # CSV 저장 (NaN → 빈 문자열로 정규화)
     combined_df = combined_df.fillna('')
     combined_df[COLS].to_csv(csv_path, index=False, encoding='utf-8-sig')
@@ -434,14 +573,13 @@ if __name__ == "__main__":
     print(f"※ 최근 3년 이내 ({CUTOFF_YEAR}년 이후) + Top 100 대기업 자소서 실시간 정밀 동기화 수집")
 
     parser = argparse.ArgumentParser(description="링커리어 합격자소서 스크래핑")
-    parser.add_argument("--start", type=int, default=1, help="시작 페이지 (기본값 1)")
-    parser.add_argument("--end", type=int, default=10, help="종료 페이지 (기본값 10)")
-    parser.add_argument("--headless", action="store_true", default=False, help="헤드리스 모드")
+    parser.add_argument("--max-pages", type=int, default=50, help="기업당 최대 검색 페이지 (기본값 50)")
+    parser.add_argument("--headless", action="store_true", default=False, help="헤드리스 모드 (기본값: False, 브라우저 창 표시)")
     args = parser.parse_args()
 
     try:
         scraper = LinkareerScraper(headless=args.headless)
-        results = scraper.scrape(start_page=args.start, end_page=args.end)
+        results = scraper.scrape(max_pages_per_company=args.max_pages)
         save_to_excel(results)
         print(f"\n작업 완료! 총 {len(results)}개 대기업 자소서 세트 최종 저장 완료")
     except Exception as e:
