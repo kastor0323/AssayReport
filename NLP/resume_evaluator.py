@@ -28,7 +28,7 @@ class ResumeEvaluator:
         elif not os.path.isabs(reference_csv_path) and not os.path.exists(reference_csv_path):
             reference_csv_path = os.path.join(base_dir, reference_csv_path)
             
-        self.reference_df = pd.read_csv(reference_csv_path, encoding='utf-8-sig')
+        self.reference_df = pd.read_csv(reference_csv_path, encoding='utf-8-sig').fillna('')
         self.kiwi = Kiwi()
         self.load_company_vision_data(base_dir)
         

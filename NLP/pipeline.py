@@ -93,8 +93,12 @@ def main():
 
         print("\n✅ 키워드 분석 완료!")
         print(f"📁 결과물:")
+        print(f"   [자소서 초안용] 직무분야별 키워드 60개 + 추천회사 Top10")
         print(f"   - {os.path.join(base_dir, 'data', 'job_keywords_analysis.csv')}")
         print(f"   - {os.path.join(base_dir, 'data', 'job_keywords_analysis.json')}")
+        print(f"   [특정기업 자소서용] 직무명별 × 질문카테고리별 키워드 20개 + 추출회사명")
+        print(f"   - {os.path.join(base_dir, 'data', 'job_keywords_by_position.csv')}")
+        print(f"   - {os.path.join(base_dir, 'data', 'job_keywords_by_position.json')}")
 
     except Exception as e:
         print(f"❌ 키워드 분석 오류: {e}")
