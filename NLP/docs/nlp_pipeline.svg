@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="860"
+     font-family="'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#555"/>
+    </marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#27AE60"/>
+    </marker>
+  </defs>
+
+  <rect width="700" height="860" fill="white"/>
+  <rect x=".5" y=".5" width="699" height="859" fill="none" stroke="#ddd" rx="4"/>
+
+  <!-- Title -->
+  <text x="350" y="34" text-anchor="middle" font-size="17" font-weight="bold" fill="#1a1a1a">NLP 처리 파이프라인</text>
+  <line x1="40" y1="46" x2="660" y2="46" stroke="#ddd"/>
+
+  <!-- ── 1. 입력 텍스트 ── -->
+  <rect x="210" y="54" width="280" height="46" rx="22" fill="#D5E8D4" stroke="#82B366" stroke-width="1.5"/>
+  <text x="350" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D4A1D">입력 텍스트 (자소서 답변)</text>
+
+  <line x1="350" y1="100" x2="350" y2="118" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── 2. 텍스트 정제 ── -->
+  <rect x="175" y="120" width="350" height="50" rx="4" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.5"/>
+  <text x="350" y="141" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B3A6B">텍스트 정제</text>
+  <text x="350" y="160" text-anchor="middle" font-size="10.5" fill="#333">null bytes 제거 · 특수문자 제거 · 회사명 마스킹</text>
+
+  <line x1="350" y1="170" x2="350" y2="188" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── 3. 언어 감지 (diamond) ── -->
+  <!-- Diamond centered at (350, 218), w=160, h=60 -->
+  <polygon points="350,188 430,218 350,248 270,218"
+           fill="#FFF2CC" stroke="#D6B656" stroke-width="1.5"/>
+  <text x="350" y="213" text-anchor="middle" font-size="11" font-weight="bold" fill="#5C4B00">언어 감지</text>
+  <text x="350" y="230" text-anchor="middle" font-size="10" fill="#5C4B00">영어 비율 50% 기준</text>
+
+  <!-- Label left: 한국어 -->
+  <text x="198" y="214" text-anchor="middle" font-size="10" fill="#1D6A36" font-weight="bold">한국어</text>
+  <!-- Label right: 영어 -->
+  <text x="502" y="214" text-anchor="middle" font-size="10" fill="#1D6A36" font-weight="bold">영어</text>
+
+  <!-- Left branch: (270,218) → (150,218) → (150,276) -->
+  <polyline points="270,218 150,218 150,276"
+            fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <!-- Right branch: (430,218) → (550,218) → (550,276) -->
+  <polyline points="430,218 550,218 550,276"
+            fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── 4a. Kiwi (Korean) ── -->
+  <rect x="52" y="278" width="196" height="76" rx="4" fill="#D5E8D4" stroke="#82B366" stroke-width="1.5"/>
+  <text x="150" y="302" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D4A1D">Kiwi</text>
+  <text x="150" y="320" text-anchor="middle" font-size="11" fill="#333">kiwi.tokenize(text)</text>
+  <text x="150" y="337" text-anchor="middle" font-size="10.5" fill="#333">명사(N) 태그 필터링</text>
+  <text x="150" y="353" text-anchor="middle" font-size="10" fill="#666">token.tag.startswith('N')</text>
+
+  <!-- ── 4b. NLTK (English) ── -->
+  <rect x="452" y="278" width="196" height="76" rx="4" fill="#D5E8D4" stroke="#82B366" stroke-width="1.5"/>
+  <text x="550" y="302" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D4A1D">NLTK</text>
+  <text x="550" y="320" text-anchor="middle" font-size="11" fill="#333">word_tokenize + pos_tag</text>
+  <text x="550" y="337" text-anchor="middle" font-size="10.5" fill="#333">NN / JJ / VB 추출</text>
+  <text x="550" y="353" text-anchor="middle" font-size="10" fill="#666">영어 불용어 제거</text>
+
+  <!-- Merge: (150,354) → (150,392) → (350,392); (550,354) → (550,392) → (350,392) -->
+  <polyline points="150,354 150,392 348,392"
+            fill="none" stroke="#555" stroke-width="1.5"/>
+  <polyline points="550,354 550,392 352,392"
+            fill="none" stroke="#555" stroke-width="1.5"/>
+  <line x1="350" y1="392" x2="350" y2="410" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- Merge label -->
+  <rect x="260" y="386" width="80" height="16" rx="3" fill="#f5f5f5" stroke="#ccc"/>
+  <text x="300" y="398" text-anchor="middle" font-size="9.5" fill="#555">합치기</text>
+
+  <!-- ── 5. 불용어 제거 ── -->
+  <rect x="175" y="412" width="350" height="50" rx="4" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.5"/>
+  <text x="350" y="433" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B3A6B">불용어 제거</text>
+  <text x="350" y="452" text-anchor="middle" font-size="10.5" fill="#333">korean_stopwords 사전 (100+ 단어) 적용</text>
+
+  <line x1="350" y1="462" x2="350" y2="480" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── 6. 길이 필터 ── -->
+  <rect x="175" y="482" width="350" height="50" rx="4" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.5"/>
+  <text x="350" y="503" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B3A6B">길이 필터</text>
+  <text x="350" y="522" text-anchor="middle" font-size="10.5" fill="#333">2자 미만 단어 제거 (len(word) &gt;= 2)</text>
+
+  <line x1="350" y1="532" x2="350" y2="550" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── 7. 빈도 집계 ── -->
+  <rect x="175" y="552" width="350" height="50" rx="4" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.5"/>
+  <text x="350" y="573" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B3A6B">빈도 집계</text>
+  <text x="350" y="592" text-anchor="middle" font-size="10.5" fill="#333">collections.Counter → 빈도 내림차순 정렬</text>
+
+  <line x1="350" y1="602" x2="350" y2="620" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── 8. Top-N 추출 ── -->
+  <rect x="175" y="622" width="350" height="50" rx="4" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.5"/>
+  <text x="350" y="643" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B3A6B">Top-N 키워드 추출</text>
+  <text x="350" y="662" text-anchor="middle" font-size="10.5" fill="#333">most_common(top_n=20) · 기본 20개 반환</text>
+
+  <line x1="350" y1="672" x2="350" y2="690" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── 9. 하드 / 소프트스킬 분류 ── -->
+  <rect x="130" y="692" width="440" height="72" rx="4" fill="#FFE6CC" stroke="#D79B00" stroke-width="1.5"/>
+  <text x="350" y="716" text-anchor="middle" font-size="13" font-weight="bold" fill="#6D3A00">하드스킬 / 소프트스킬 분류</text>
+
+  <rect x="148" y="726" width="190" height="30" rx="3" fill="#FFD0A0" stroke="#D79B00"/>
+  <text x="243" y="746" text-anchor="middle" font-size="11" fill="#6D3A00">소프트스킬 사전 매칭</text>
+
+  <rect x="362" y="726" width="190" height="30" rx="3" fill="#FFD0A0" stroke="#D79B00"/>
+  <text x="457" y="746" text-anchor="middle" font-size="11" fill="#6D3A00">나머지 → 하드스킬</text>
+
+  <line x1="350" y1="764" x2="350" y2="782" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── 출력 ── -->
+  <rect x="175" y="784" width="350" height="50" rx="22" fill="#D5E8D4" stroke="#82B366" stroke-width="1.5"/>
+  <text x="350" y="805" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D4A1D">키워드 반환</text>
+  <text x="350" y="824" text-anchor="middle" font-size="10.5" fill="#333">[하드스킬 Top-15, 소프트스킬 Top-10]</text>
+</svg>

@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="760"
+     font-family="'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#555"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#C0392B"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="760" fill="white"/>
+  <rect x=".5" y=".5" width="899" height="759" fill="none" stroke="#ddd" rx="4"/>
+
+  <!-- Title -->
+  <text x="450" y="34" text-anchor="middle" font-size="18" font-weight="bold" fill="#1a1a1a">시스템 아키텍처</text>
+  <line x1="40" y1="46" x2="860" y2="46" stroke="#ddd"/>
+
+  <!-- ── LAYER 1 : 프론트엔드 ── -->
+  <rect x="22" y="54" width="856" height="90" rx="4" fill="#EBF5FB" stroke="#2980B9" stroke-width="1.5"/>
+  <rect x="22" y="54" width="856" height="24" rx="4" fill="#2980B9"/>
+  <rect x="22"  y="66" width="856" height="12" fill="#2980B9"/>
+  <text x="450" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="white">프론트엔드 — React</text>
+
+  <rect x="50"  y="86" width="234" height="48" rx="3" fill="#D6EAF8" stroke="#2980B9"/>
+  <text x="167" y="107" text-anchor="middle" font-size="13" font-weight="bold" fill="#154360">자소서 입력 UI</text>
+  <text x="167" y="124" text-anchor="middle" font-size="10" fill="#333">직무 · 기업 · 문항 작성</text>
+
+  <rect x="333" y="86" width="234" height="48" rx="3" fill="#D6EAF8" stroke="#2980B9"/>
+  <text x="450" y="107" text-anchor="middle" font-size="13" font-weight="bold" fill="#154360">결과 대시보드</text>
+  <text x="450" y="124" text-anchor="middle" font-size="10" fill="#333">점수 · 등급 · 매칭 키워드</text>
+
+  <rect x="616" y="86" width="234" height="48" rx="3" fill="#D6EAF8" stroke="#2980B9"/>
+  <text x="733" y="107" text-anchor="middle" font-size="13" font-weight="bold" fill="#154360">회원관리</text>
+  <text x="733" y="124" text-anchor="middle" font-size="10" fill="#333">회원가입 · 로그인 · 세션</text>
+
+  <!-- Arrow 1 → 2 -->
+  <line x1="450" y1="144" x2="450" y2="168" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="463" y="159" font-size="9.5" fill="#666">HTTP REST API</text>
+
+  <!-- ── LAYER 2 : 백엔드 API ── -->
+  <rect x="22" y="172" width="856" height="90" rx="4" fill="#F3EEFB" stroke="#8E44AD" stroke-width="1.5"/>
+  <rect x="22" y="172" width="856" height="24" rx="4" fill="#8E44AD"/>
+  <rect x="22"  y="184" width="856" height="12" fill="#8E44AD"/>
+  <text x="450" y="188" text-anchor="middle" font-size="11" font-weight="bold" fill="white">백엔드 API</text>
+
+  <rect x="50"  y="204" width="382" height="48" rx="3" fill="#E8D5F7" stroke="#8E44AD"/>
+  <text x="241" y="225" text-anchor="middle" font-size="13" font-weight="bold" fill="#4A235A">Spring Boot (Java)</text>
+  <text x="241" y="243" text-anchor="middle" font-size="10" fill="#333">JWT 인증 · 회원관리 · MariaDB</text>
+
+  <rect x="468" y="204" width="382" height="48" rx="3" fill="#E8D5F7" stroke="#8E44AD"/>
+  <text x="659" y="225" text-anchor="middle" font-size="13" font-weight="bold" fill="#4A235A">Flask REST API (Python)</text>
+  <text x="659" y="243" text-anchor="middle" font-size="10" fill="#333">POST /evaluate · CORS · 평가 로직 호출</text>
+
+  <!-- Arrow 2 → 3 -->
+  <line x1="450" y1="262" x2="450" y2="288" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── LAYER 3 : NLP 처리 엔진 ── -->
+  <rect x="22" y="292" width="856" height="112" rx="4" fill="#EAFAF1" stroke="#27AE60" stroke-width="1.5"/>
+  <rect x="22" y="292" width="856" height="24" rx="4" fill="#27AE60"/>
+  <rect x="22"  y="304" width="856" height="12" fill="#27AE60"/>
+  <text x="450" y="308" text-anchor="middle" font-size="11" font-weight="bold" fill="white">NLP 처리 엔진 — keyword_extraction.py</text>
+
+  <rect x="42"  y="324" width="174" height="68" rx="3" fill="#D5F5E3" stroke="#27AE60"/>
+  <text x="129" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D6A36">Kiwi</text>
+  <text x="129" y="364" text-anchor="middle" font-size="10" fill="#333">한국어 형태소 분석</text>
+  <text x="129" y="380" text-anchor="middle" font-size="10" fill="#333">명사(N) 추출</text>
+
+  <line x1="216" y1="358" x2="238" y2="358" stroke="#27AE60" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <rect x="240" y="324" width="174" height="68" rx="3" fill="#D5F5E3" stroke="#27AE60"/>
+  <text x="327" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D6A36">NLTK</text>
+  <text x="327" y="364" text-anchor="middle" font-size="10" fill="#333">영어 품사 태깅</text>
+  <text x="327" y="380" text-anchor="middle" font-size="10" fill="#333">NN / JJ / VB 필터</text>
+
+  <line x1="414" y1="358" x2="436" y2="358" stroke="#27AE60" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <rect x="438" y="324" width="174" height="68" rx="3" fill="#D5F5E3" stroke="#27AE60"/>
+  <text x="525" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D6A36">불용어 처리</text>
+  <text x="525" y="364" text-anchor="middle" font-size="10" fill="#333">한국어 불용어 사전</text>
+  <text x="525" y="380" text-anchor="middle" font-size="10" fill="#333">100+ 단어 제거</text>
+
+  <line x1="612" y1="358" x2="634" y2="358" stroke="#27AE60" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <rect x="636" y="324" width="204" height="68" rx="3" fill="#D5F5E3" stroke="#27AE60"/>
+  <text x="738" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D6A36">키워드 추출</text>
+  <text x="738" y="364" text-anchor="middle" font-size="10" fill="#333">빈도 기반 Top-N</text>
+  <text x="738" y="380" text-anchor="middle" font-size="10" fill="#333">하드 / 소프트스킬 분류</text>
+
+  <!-- Arrow 3 → 4 -->
+  <line x1="450" y1="404" x2="450" y2="428" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ── LAYER 4 : 평가 엔진 ── -->
+  <rect x="22" y="432" width="856" height="90" rx="4" fill="#FEF9E7" stroke="#E67E22" stroke-width="1.5"/>
+  <rect x="22" y="432" width="856" height="24" rx="4" fill="#E67E22"/>
+  <rect x="22"  y="444" width="856" height="12" fill="#E67E22"/>
+  <text x="450" y="448" text-anchor="middle" font-size="11" font-weight="bold" fill="white">평가 엔진 — resume_evaluator.py</text>
+
+  <rect x="50"  y="464" width="352" height="48" rx="3" fill="#FAD7A0" stroke="#E67E22"/>
+  <text x="226" y="485" text-anchor="middle" font-size="13" font-weight="bold" fill="#784212">키워드 매칭 점수 (70%)</text>
+  <text x="226" y="503" text-anchor="middle" font-size="10" fill="#333">합격 키워드 ∩ 사용자 키워드 → 점수화</text>
+
+  <rect x="430" y="464" width="352" height="48" rx="3" fill="#FAD7A0" stroke="#E67E22"/>
+  <text x="606" y="485" text-anchor="middle" font-size="13" font-weight="bold" fill="#784212">비전 정합성 점수 (30%)</text>
+  <text x="606" y="503" text-anchor="middle" font-size="10" fill="#333">기업 인재상 · 서사 구조 · 액션 동사</text>
+
+  <!-- Arrow 4 → 5 (dashed) -->
+  <line x1="450" y1="522" x2="450" y2="548" stroke="#F39C12" stroke-width="1.5"
+        stroke-dasharray="5,3" marker-end="url(#a)"/>
+  <text x="462" y="538" font-size="9.5" fill="#F39C12">참조</text>
+
+  <!-- ── LAYER 5 : 데이터 레이어 ── -->
+  <rect x="22" y="552" width="856" height="90" rx="4" fill="#FEF5E7" stroke="#F39C12" stroke-width="1.5"/>
+  <rect x="22" y="552" width="856" height="24" rx="4" fill="#F39C12"/>
+  <rect x="22"  y="564" width="856" height="12" fill="#F39C12"/>
+  <text x="450" y="568" text-anchor="middle" font-size="11" font-weight="bold" fill="white">데이터 레이어</text>
+
+  <rect x="50"  y="584" width="248" height="48" rx="3" fill="#FDEBD0" stroke="#F39C12"/>
+  <text x="174" y="604" text-anchor="middle" font-size="12" font-weight="bold" fill="#784212">합격 자소서 DB</text>
+  <text x="174" y="622" text-anchor="middle" font-size="10" fill="#555">linked_scraping_result.csv</text>
+
+  <rect x="326" y="584" width="248" height="48" rx="3" fill="#FDEBD0" stroke="#F39C12"/>
+  <text x="450" y="604" text-anchor="middle" font-size="12" font-weight="bold" fill="#784212">키워드 분석 DB</text>
+  <text x="450" y="622" text-anchor="middle" font-size="10" fill="#555">job_keywords_analysis.csv</text>
+
+  <rect x="602" y="584" width="248" height="48" rx="3" fill="#FDEBD0" stroke="#F39C12"/>
+  <text x="726" y="604" text-anchor="middle" font-size="12" font-weight="bold" fill="#784212">기업 인재상 DB</text>
+  <text x="726" y="622" text-anchor="middle" font-size="10" fill="#555">companies.json</text>
+
+  <!-- Arrow 6 → 5 (upward, scraping feeds data) -->
+  <line x1="450" y1="692" x2="450" y2="644" stroke="#C0392B" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="462" y="674" font-size="9.5" fill="#C0392B">수집 저장</text>
+
+  <!-- ── LAYER 6 : 스크래핑 ── -->
+  <rect x="22" y="694" width="856" height="52" rx="4" fill="#FDEDEC" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="450" y="718" text-anchor="middle" font-size="13" font-weight="bold" fill="#922B21">스크래핑 — Selenium</text>
+  <text x="450" y="736" text-anchor="middle" font-size="11" fill="#555">linked_scraper.py + pipeline.py → 링커리어.com (100대 기업 · 최근 3년 합격 자소서)</text>
+</svg>
